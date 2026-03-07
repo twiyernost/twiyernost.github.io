@@ -168,13 +168,31 @@
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-    let userData = JSON.parse(localStorage.getItem('tviyerost_user')) || { loggedIn: false, name: "Гость", handle: "@guest", img: "", bio: "", location: "", website: "", id: "u" + Date.now() };
+    let userData = JSON.parse(localStorage.getItem('tviyerost_user')) || { 
+        loggedIn: false, 
+        name: "Гость", 
+        handle: "@guest", 
+        img: "", 
+        bio: "", 
+        location: "", 
+        website: "", 
+        id: "u" + Date.now() 
+    };
     let tempMedia = null;
     let tempNewAvatar = null;
 
     function onGoogleSignIn(response) {
         const payload = JSON.parse(atob(response.credential.split('.')[1]));
-        userData = { loggedIn: true, name: payload.name, handle: "@" + payload.given_name.toLowerCase(), img: payload.picture, bio: "", location: "", website: "", id: "u" + Date.now() };
+        userData = { 
+            loggedIn: true, 
+            name: payload.name, 
+            handle: "@" + payload.given_name.toLowerCase(), 
+            img: payload.picture, 
+            bio: "", 
+            location: "", 
+            website: "", 
+            id: "u" + Date.now() 
+        };
         localStorage.setItem('tviyerost_user', JSON.stringify(userData));
         updateUI();
     }
@@ -192,7 +210,9 @@
             web.innerText = "";
         }
 
-        document.querySelectorAll('.my-pic').forEach(el => { el.style.backgroundImage = `url(${userData.img})`; });
+        document.querySelectorAll('.my-pic').forEach(el => { 
+            el.style.backgroundImage = `url(${userData.img})`; 
+        });
         if(userData.loggedIn) document.getElementById('authModal').style.display = 'none';
         loadPosts();
     }
@@ -230,7 +250,6 @@
         
         localStorage.setItem('tviyerost_user', JSON.stringify(userData));
         
-        // Обновляем аватар во всех старых постах пользователя
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         posts.forEach(p => {
             if (p.userId === userData.id) {
@@ -256,8 +275,8 @@
     }
 
     function publishPost() {
-        const txt = document.getElementById('postText').value;
-        if(!txt.trim() && !tempMedia || !userData.loggedIn) return;
+        const txt = document.getElementById('postText').value.trim();
+        if ((!txt && !tempMedia) || !userData.loggedIn) return;
 
         const newPost = { 
             id: Date.now(), 
@@ -269,7 +288,9 @@
             media: tempMedia, 
             date: new Date().toLocaleString(),
             likes: 0,
-            reposts: 0
+            likedBy: [],
+            reposts: 0,
+            isRepostOf: null
         };
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         posts.unshift(newPost);
@@ -288,49 +309,127 @@
         if(feedContainer) feedContainer.innerHTML = "";
         if(profileContainer) profileContainer.innerHTML = "";
 
-        postsToRender.forEach(p => {
-            let mediaHtml = p.media ? (p.media.type.includes('image') ? `<img src="${p.media.data}" class="post-media" id="img-${p.id}">` : `<video src="${p.media.data}" class="post-media" controls></video>`) : "";
+        (postsToRender || []).forEach(p => {
+            let mediaHtml = p.media ? (p.media.type.includes('image') 
+                ? `<img src="${p.media.data}" class="post-media" id="img-${p.id}">` 
+                : `<video src="${p.media.data}" class="post-media" controls></video>`) : "";
+
+            const isLiked = userData.loggedIn && p.likedBy?.includes(userData.id);
+            const likeColor = isLiked ? 'var(--red)' : 'var(--text-gray)';
             
+            let repostNote = "";
+            if (p.isRepostOf) {
+                repostNote = `<div style="color:var(--text-gray); font-size:14px; margin-bottom:4px;">
+                    🔁 ${p.userName} репостнул
+                </div>`;
+            }
+
             const postHtml = `
                 <div class="post">
                     <div class="avatar-sm" style="background-image:url(${p.userImg});"></div>
                     <div style="flex:1">
                         ${p.userId === userData.id ? `<span class="btn-delete" onclick="deletePost(${p.id})">🗑️</span>` : ''}
+                        ${repostNote}
                         <b>${p.userName}</b> <span style="color:var(--text-gray)">${p.userHandle} · ${p.date}</span>
                         <div style="margin-top:8px; font-size:18px;">${p.text}</div>
                         ${mediaHtml}
                         <div class="post-actions">
-                            <button class="action-btn" onclick="interact(${p.id}, 'likes', this)">❤️ <span>${p.likes || 0}</span></button>
-                            <button class="action-btn" onclick="interact(${p.id}, 'reposts', this)">🔁 <span>${p.reposts || 0}</span></button>
+                            <button class="action-btn" onclick="toggleLike(${p.id}, this)" style="color:${likeColor}">
+                                ❤️ <span>${p.likes || 0}</span>
+                            </button>
+                            <button class="action-btn" onclick="makeRepost(${p.id})">
+                                🔁 <span>${p.reposts || 0}</span>
+                            </button>
                             <button class="action-btn" onclick="downloadWithWatermark(${p.id}, '${p.userHandle}')">📥</button>
                         </div>
                     </div>
                 </div>`;
             
             if(feedContainer) feedContainer.innerHTML += postHtml;
-            if(profileContainer && p.userId === userData.id) profileContainer.innerHTML += postHtml;
+            if(profileContainer && (p.userId === userData.id || p.isRepostOf)) {
+                profileContainer.innerHTML += postHtml;
+            }
         });
     }
 
-    function interact(id, type, el) {
+    function toggleLike(id, el) {
+        if (!userData.loggedIn) return;
+
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         const post = posts.find(p => p.id === id);
-        if(post) {
-            post[type] = (post[type] || 0) + 1;
-            localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
-            const span = el.querySelector('span');
-            span.innerText = post[type];
-            el.style.color = type === 'likes' ? 'var(--red)' : 'var(--green)';
+        if (!post) return;
+
+        if (!post.likedBy) post.likedBy = [];
+
+        const alreadyLiked = post.likedBy.includes(userData.id);
+        if (alreadyLiked) {
+            post.likedBy = post.likedBy.filter(uid => uid !== userData.id);
+            post.likes = Math.max(0, (post.likes || 0) - 1);
+            el.style.color = 'var(--text-gray)';
+        } else {
+            post.likedBy.push(userData.id);
+            post.likes = (post.likes || 0) + 1;
+            el.style.color = 'var(--red)';
         }
+
+        const span = el.querySelector('span');
+        span.innerText = post.likes;
+
+        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
+    }
+
+    function makeRepost(originalId) {
+        if (!userData.loggedIn) return;
+
+        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
+        const original = posts.find(p => p.id === originalId);
+        if (!original) return;
+
+        const alreadyReposted = posts.some(p => 
+            p.userId === userData.id && p.isRepostOf === originalId
+        );
+        if (alreadyReposted) {
+            alert("Вы уже сделали репост этого поста");
+            return;
+        }
+
+        const repost = { 
+            ...original,
+            id: Date.now(),
+            userId: userData.id,
+            userName: userData.name,
+            userHandle: userData.handle,
+            userImg: userData.img,
+            date: new Date().toLocaleString(),
+            isRepostOf: originalId,
+            likes: original.likes,
+            likedBy: [...(original.likedBy || [])],
+            reposts: (original.reposts || 0) + 1
+        };
+
+        original.reposts = (original.reposts || 0) + 1;
+
+        posts.unshift(repost);
+        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
+        renderPosts(posts);
     }
 
     function deletePost(id) {
-        if(confirm("Удалить этот пост?")) {
-            let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
-            posts = posts.filter(p => p.id !== id);
-            localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
-            renderPosts(posts);
+        if(!confirm("Удалить этот пост?")) return;
+
+        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
+        const post = posts.find(p => p.id === id);
+        
+        if (post && post.isRepostOf) {
+            const original = posts.find(p => p.id === post.isRepostOf);
+            if (original) {
+                original.reposts = Math.max(0, (original.reposts || 1) - 1);
+            }
         }
+
+        posts = posts.filter(p => p.id !== id);
+        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
+        renderPosts(posts);
     }
 
     function deleteAccount() {
@@ -348,7 +447,8 @@
         const image = new Image();
         image.src = img.src;
         image.onload = () => {
-            canvas.width = image.width; canvas.height = image.height;
+            canvas.width = image.width; 
+            canvas.height = image.height;
             ctx.drawImage(image, 0, 0);
             ctx.font = "bold " + (canvas.width/20) + "px Arial";
             ctx.fillStyle = "rgba(255,255,255,0.7)";
@@ -360,8 +460,15 @@
         };
     }
 
-    function loadPosts() { renderPosts(JSON.parse(localStorage.getItem('tviyerost_posts')) || []); }
-    function logout() { document.getElementById('final-screen').style.display = 'flex'; setTimeout(() => { location.reload(); }, 1500); }
+    function loadPosts() { 
+        const posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
+        renderPosts(posts); 
+    }
+
+    function logout() { 
+        document.getElementById('final-screen').style.display = 'flex'; 
+        setTimeout(() => { location.reload(); }, 1500); 
+    }
     
     function showTab(id, el) {
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
@@ -370,6 +477,7 @@
         if(el) el.classList.add('active');
         window.scrollTo(0,0);
     }
+
     window.onload = updateUI;
 </script>
 </body>
