@@ -54,6 +54,47 @@
 
         .mobile-nav { display: none; }
 
+        .comment-section {
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+        }
+        .comment {
+            margin: 8px 0;
+            font-size: 15px;
+        }
+        .comment-author {
+            font-weight: bold;
+            color: var(--white);
+        }
+        .comment-text {
+            color: var(--text-gray);
+        }
+        .comment-input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .comment-input {
+            flex: 1;
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 16px;
+            color: white;
+            font-size: 15px;
+            outline: none;
+        }
+        .comment-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 99px;
+            padding: 8px 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
         @media (max-width: 1000px) { nav { width: 80px; } .nav-text { display: none; } }
         @media (max-width: 600px) {
             nav { display: none; }
@@ -290,7 +331,8 @@
             likes: 0,
             likedBy: [],
             reposts: 0,
-            isRepostOf: null
+            isRepostOf: null,
+            comments: []  // ← добавлено поле для комментариев
         };
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         posts.unshift(newPost);
@@ -316,13 +358,32 @@
 
             const isLiked = userData.loggedIn && p.likedBy?.includes(userData.id);
             const likeColor = isLiked ? 'var(--red)' : 'var(--text-gray)';
-            
-            let repostNote = "";
-            if (p.isRepostOf) {
-                repostNote = `<div style="color:var(--text-gray); font-size:14px; margin-bottom:4px;">
-                    🔁 ${p.userName} репостнул
-                </div>`;
+
+            let repostNote = p.isRepostOf ? 
+                `<div style="color:var(--text-gray); font-size:14px; margin-bottom:4px;">🔁 ${p.userName} репостнул</div>` : "";
+
+            // Комментарии
+            let commentsHtml = '';
+            if (p.comments && p.comments.length > 0) {
+                commentsHtml = '<div class="comment-section">';
+                p.comments.forEach(c => {
+                    commentsHtml += `
+                        <div class="comment">
+                            <span class="comment-author">${c.authorName}</span>
+                            <span style="color:var(--text-gray); font-size:13px;"> · ${c.date}</span>
+                            <div class="comment-text">${c.text}</div>
+                        </div>`;
+                });
+                commentsHtml += '</div>';
             }
+
+            // Поле для нового комментария (только если залогинен)
+            let commentInputHtml = userData.loggedIn ? `
+                <div class="comment-input-area" data-post-id="${p.id}">
+                    <textarea class="comment-input" placeholder="Написать комментарий..." rows="1" data-post-id="${p.id}"></textarea>
+                    <button class="comment-btn" onclick="addComment(${p.id})">Отправить</button>
+                </div>
+            ` : '';
 
             const postHtml = `
                 <div class="post">
@@ -342,9 +403,11 @@
                             </button>
                             <button class="action-btn" onclick="downloadWithWatermark(${p.id}, '${p.userHandle}')">📥</button>
                         </div>
+                        ${commentsHtml}
+                        ${commentInputHtml}
                     </div>
                 </div>`;
-            
+
             if(feedContainer) feedContainer.innerHTML += postHtml;
             if(profileContainer && (p.userId === userData.id || p.isRepostOf)) {
                 profileContainer.innerHTML += postHtml;
@@ -378,6 +441,31 @@
         localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
     }
 
+    function addComment(postId) {
+        if (!userData.loggedIn) return;
+
+        const textarea = document.querySelector(`textarea[data-post-id="${postId}"]`);
+        const text = textarea.value.trim();
+        if (!text) return;
+
+        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
+        const post = posts.find(p => p.id === postId);
+        if (!post) return;
+
+        if (!post.comments) post.comments = [];
+
+        post.comments.push({
+            authorId: userData.id,
+            authorName: userData.name,
+            text: text,
+            date: new Date().toLocaleString()
+        });
+
+        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
+        textarea.value = "";
+        renderPosts(posts);
+    }
+
     function makeRepost(originalId) {
         if (!userData.loggedIn) return;
 
@@ -404,7 +492,8 @@
             isRepostOf: originalId,
             likes: original.likes,
             likedBy: [...(original.likedBy || [])],
-            reposts: (original.reposts || 0) + 1
+            reposts: (original.reposts || 0) + 1,
+            comments: []  // новые комментарии не копируются
         };
 
         original.reposts = (original.reposts || 0) + 1;
@@ -422,9 +511,7 @@
         
         if (post && post.isRepostOf) {
             const original = posts.find(p => p.id === post.isRepostOf);
-            if (original) {
-                original.reposts = Math.max(0, (original.reposts || 1) - 1);
-            }
+            if (original) original.reposts = Math.max(0, (original.reposts || 1) - 1);
         }
 
         posts = posts.filter(p => p.id !== id);
