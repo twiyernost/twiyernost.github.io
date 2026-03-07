@@ -33,7 +33,6 @@
         .avatar-sm { width: 48px; height: 48px; border-radius: 50%; background: #444; flex-shrink: 0; background-size: cover; background-position: center; cursor: pointer; }
         textarea { width: 100%; background: none; border: none; color: white; font-size: 19px; outline: none; resize: none; padding-top: 10px; }
         
-        /* Стили для медиа в постах */
         .post-media { width: 100%; border-radius: 16px; margin-top: 10px; border: 1px solid var(--border); max-height: 500px; object-fit: cover; }
         
         .post { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; position: relative; transition: 0.2s; }
@@ -45,11 +44,14 @@
         .btn-delete:hover { color: var(--red); opacity: 1; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(91, 112, 131, 0.4); display: none; justify-content: center; align-items: center; z-index: 100; }
-        .modal { background: black; width: 400px; border-radius: 16px; padding: 30px; text-align: center; border: 1px solid var(--border); }
+        .modal { background: black; width: 500px; border-radius: 16px; padding: 20px; border: 1px solid var(--border); max-height: 90vh; overflow-y: auto; }
         .btn-accent { background: var(--accent); color: white; border: none; border-radius: 99px; padding: 10px 20px; font-weight: bold; cursor: pointer; }
-        .btn-accent:disabled { opacity: 0.5; }
+        
+        /* Стили полей ввода настроек */
+        .edit-field { width: 100%; padding: 12px; margin-bottom: 20px; background: black; border: 1px solid var(--border); color: white; border-radius: 4px; font-size: 16px; }
+        .edit-field:focus { border-color: var(--accent); outline: none; }
+        .label-text { display: block; text-align: left; color: var(--text-gray); font-size: 13px; margin-bottom: 5px; }
 
-        /* Концовка */
         #final-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
 
         .mobile-nav { display: none; }
@@ -58,12 +60,9 @@
         @media (max-width: 600px) {
             nav { display: none; }
             main { width: 100%; border: none; }
-            .mobile-nav { 
-                display: flex; position: fixed; bottom: 0; width: 100%; 
-                background: black; border-top: 1px solid var(--border); 
-                justify-content: space-around; padding: 15px; z-index: 20;
-            }
+            .mobile-nav { display: flex; position: fixed; bottom: 0; width: 100%; background: black; border-top: 1px solid var(--border); justify-content: space-around; padding: 15px; z-index: 20; }
             .app-container { padding-bottom: 60px; }
+            .modal { width: 95%; }
         }
     </style>
 </head>
@@ -75,15 +74,11 @@
 </div>
 
 <div id="authModal" class="modal-overlay" style="display: flex;">
-    <div class="modal">
+    <div class="modal" style="text-align: center;">
         <div style="font-size:40px; margin-bottom:10px; font-weight:900;">Т</div>
         <h2>Войти в Твиьерость</h2>
-        <p style="color: var(--text-gray)">Используйте аккаунт Google</p>
         <div style="margin-top: 25px; display: flex; justify-content: center;">
-            <div id="g_id_onload"
-                 data-client_id="254609526549-srv2qeo7otu12op9eh9qfkf0h8lpgck9.apps.googleusercontent.com"
-                 data-callback="onGoogleSignIn">
-            </div>
+            <div id="g_id_onload" data-client_id="254609526549-srv2qeo7otu12op9eh9qfkf0h8lpgck9.apps.googleusercontent.com" data-callback="onGoogleSignIn"></div>
             <div class="g_id_signin" data-type="standard" data-shape="pill"></div>
         </div>
     </div>
@@ -91,11 +86,31 @@
 
 <div id="editProfileModal" class="modal-overlay">
     <div class="modal">
-        <h3>Изменить профиль</h3>
-        <input type="text" id="editName" placeholder="Имя" style="width:100%; padding:10px; margin-bottom:10px; background:#111; color:white; border:1px solid #333;">
-        <textarea id="editBio" placeholder="О себе" style="width:100%; padding:10px; margin-bottom:10px; background:#111; color:white; border:1px solid #333;"></textarea>
-        <button class="btn-accent" onclick="saveProfile()">Сохранить</button>
-        <button class="btn-accent" style="background:none;" onclick="document.getElementById('editProfileModal').style.display='none'">Отмена</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin:0">Изменить профиль</h3>
+            <button class="btn-accent" onclick="saveProfile()">Сохранить</button>
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 20px; position: relative;">
+            <div id="edit-avatar-preview" class="avatar-sm" style="width:100px; height:100px; margin:0 auto; border: 2px solid var(--accent);"></div>
+            <label style="display:block; margin-top:10px; color:var(--accent); cursor:pointer;">
+                Изменить фото <input type="file" accept="image/*" style="display:none;" onchange="previewNewAvatar(this)">
+            </label>
+        </div>
+
+        <span class="label-text">Имя</span>
+        <input type="text" id="editName" class="edit-field">
+
+        <span class="label-text">О себе</span>
+        <textarea id="editBio" class="edit-field" rows="3"></textarea>
+
+        <span class="label-text">Местоположение</span>
+        <input type="text" id="editLocation" class="edit-field">
+
+        <span class="label-text">Веб-сайт</span>
+        <input type="text" id="editWebsite" class="edit-field">
+
+        <button class="btn-accent" style="background:none; border:1px solid var(--border); width:100%;" onclick="document.getElementById('editProfileModal').style.display='none'">Отмена</button>
     </div>
 </div>
 
@@ -125,15 +140,19 @@
 
         <div id="profile" class="content-section">
             <div class="header">Профиль</div>
-            <div style="padding: 30px; text-align: center; border-bottom: 1px solid var(--border);">
-                <div class="avatar-sm my-pic" style="width:120px; height:120px; margin:0 auto; border: 4px solid var(--border);"></div>
-                <h2 id="prof-name" style="margin-top:15px; margin-bottom:0;">Гость</h2>
-                <p id="prof-handle" style="color:var(--text-gray); margin-top:5px;">@guest</p>
-                <p id="prof-bio" style="font-size:14px; color:var(--white);"></p>
-                <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
-                    <button class="btn-accent" onclick="document.getElementById('editProfileModal').style.display='flex'">Изменить</button>
-                    <button class="btn-accent" style="background:#fff; color:#000;" onclick="logout()">Выйти</button>
+            <div style="padding: 30px; border-bottom: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div class="avatar-sm my-pic" style="width:100px; height:100px; border: 4px solid var(--black);"></div>
+                    <button class="btn-accent" style="background:none; border: 1px solid var(--border);" onclick="openEditModal()">Изменить профиль</button>
                 </div>
+                <h2 id="prof-name" style="margin-top:15px; margin-bottom:0;">Гость</h2>
+                <p id="prof-handle" style="color:var(--text-gray); margin-top:5px; margin-bottom:10px;">@guest</p>
+                <p id="prof-bio" style="font-size:15px; margin-bottom:10px;"></p>
+                <div style="display:flex; gap:15px; color:var(--text-gray); font-size:14px;">
+                    <span id="prof-location"></span>
+                    <a id="prof-website" href="#" style="color:var(--accent); text-decoration:none;"></a>
+                </div>
+                <button class="btn-accent" style="margin-top:20px; background:#fff; color:#000; width: 100%;" onclick="logout()">Выйти</button>
             </div>
             <div id="userPosts"></div>
         </div>
@@ -148,24 +167,17 @@
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-    // Настройки Firebase (для того чтобы разные пользователи видели друг друга)
-    // ТУТ НУЖНО ВСТАВИТЬ СВОИ КЛЮЧИ FIREBASE ДЛЯ ОБЩЕЙ ЛЕНТЫ
     const firebaseConfig = { apiKey: "AIza...", projectId: "tviyerost", appId: "1:..." };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let userData = JSON.parse(localStorage.getItem('tviyerost_user')) || { loggedIn: false, name: "Гость", handle: "@guest", img: "", bio: "" };
+    let userData = JSON.parse(localStorage.getItem('tviyerost_user')) || { loggedIn: false, name: "Гость", handle: "@guest", img: "", bio: "", location: "", website: "" };
     let tempMedia = null;
+    let tempNewAvatar = null;
 
     function onGoogleSignIn(response) {
         const payload = JSON.parse(atob(response.credential.split('.')[1]));
-        userData = { 
-            loggedIn: true, 
-            name: payload.name, 
-            handle: "@" + payload.given_name.toLowerCase(), 
-            img: payload.picture,
-            bio: ""
-        };
+        userData = { loggedIn: true, name: payload.name, handle: "@" + payload.given_name.toLowerCase(), img: payload.picture, bio: "", location: "", website: "" };
         localStorage.setItem('tviyerost_user', JSON.stringify(userData));
         updateUI();
     }
@@ -174,6 +186,11 @@
         document.getElementById('prof-name').innerText = userData.name;
         document.getElementById('prof-handle').innerText = userData.handle;
         document.getElementById('prof-bio').innerText = userData.bio || "";
+        document.getElementById('prof-location').innerText = userData.location ? "📍 " + userData.location : "";
+        const web = document.getElementById('prof-website');
+        web.innerText = userData.website ? "🔗 " + userData.website : "";
+        web.href = userData.website ? (userData.website.startsWith('http') ? userData.website : 'https://'+userData.website) : "#";
+
         document.querySelectorAll('.my-pic').forEach(el => {
             el.style.backgroundImage = `url(${userData.img})`;
         });
@@ -181,43 +198,58 @@
         loadPosts();
     }
 
-    function handleFile(input) {
+    function openEditModal() {
+        document.getElementById('editName').value = userData.name;
+        document.getElementById('editBio').value = userData.bio || "";
+        document.getElementById('editLocation').value = userData.location || "";
+        document.getElementById('editWebsite').value = userData.website || "";
+        document.getElementById('edit-avatar-preview').style.backgroundImage = `url(${userData.img})`;
+        document.getElementById('editProfileModal').style.display = 'flex';
+    }
+
+    function previewNewAvatar(input) {
         const file = input.files[0];
-        if (!file) return;
-        document.getElementById('fileName').innerText = file.name;
-        const reader = new FileReader();
-        reader.onload = (e) => tempMedia = { data: e.target.result, type: file.type };
-        reader.readAsDataURL(file);
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                tempNewAvatar = e.target.result;
+                document.getElementById('edit-avatar-preview').style.backgroundImage = `url(${tempNewAvatar})`;
+            };
+            reader.readAsDataURL(file);
+        }
     }
 
     function saveProfile() {
         userData.name = document.getElementById('editName').value;
         userData.bio = document.getElementById('editBio').value;
+        userData.location = document.getElementById('editLocation').value;
+        userData.website = document.getElementById('editWebsite').value;
+        if(tempNewAvatar) userData.img = tempNewAvatar;
+        
         localStorage.setItem('tviyerost_user', JSON.stringify(userData));
         document.getElementById('editProfileModal').style.display = 'none';
         updateUI();
+    }
+
+    function handleFile(input) {
+        const file = input.files[0];
+        if (file) {
+            document.getElementById('fileName').innerText = file.name;
+            const reader = new FileReader();
+            reader.onload = (e) => tempMedia = { data: e.target.result, type: file.type };
+            reader.readAsDataURL(file);
+        }
     }
 
     async function publishPost() {
         const txt = document.getElementById('postText').value;
         if(!txt.trim() && !tempMedia || !userData.loggedIn) return;
 
-        const newPost = {
-            id: Date.now(),
-            text: txt,
-            userName: userData.name,
-            userHandle: userData.handle,
-            userImg: userData.img,
-            media: tempMedia,
-            date: new Date().toLocaleString()
-        };
-
-        // Сохраняем в Firebase для общей ленты (если настроено) или в LocalStorage
+        const newPost = { id: Date.now(), text: txt, userName: userData.name, userHandle: userData.handle, userImg: userData.img, media: tempMedia, date: new Date().toLocaleString() };
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         posts.unshift(newPost);
         localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
         
-        // Очистка
         document.getElementById('postText').value = "";
         document.getElementById('fileName').innerText = "";
         tempMedia = null;
@@ -233,43 +265,36 @@
                 if(p.media.type.includes('image')) mediaHtml = `<img src="${p.media.data}" class="post-media" id="img-${p.id}">`;
                 else mediaHtml = `<video src="${p.media.data}" class="post-media" controls></video>`;
             }
-
             container.innerHTML += `
                 <div class="post">
-                    <div class="avatar-sm" style="background-image:url(${p.userImg});" onclick="openProfile('${p.userHandle}')"></div>
+                    <div class="avatar-sm" style="background-image:url(${p.userImg});"></div>
                     <div style="flex:1">
                         <span class="btn-delete" onclick="deletePost(${p.id})">🗑️</span>
                         <b>${p.userName}</b> <span style="color:var(--text-gray)">${p.userHandle} · ${p.date}</span>
                         <div style="margin-top:8px; font-size:18px;">${p.text}</div>
                         ${mediaHtml}
                         <div class="post-actions">
-                            <button class="action-btn">💬 0</button>
-                            <button class="action-btn">🔁 0</button>
-                            <button class="action-btn">❤️ 0</button>
+                            <button class="action-btn">💬 0</button><button class="action-btn">🔁 0</button><button class="action-btn">❤️ 0</button>
                             <button class="action-btn" onclick="downloadWithWatermark(${p.id}, '${p.userHandle}')">📥</button>
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
         });
     }
 
     function downloadWithWatermark(postId, handle) {
         const img = document.getElementById('img-' + postId);
         if(!img) return alert("Только для фото");
-
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const image = new Image();
         image.src = img.src;
         image.onload = () => {
-            canvas.width = image.width;
-            canvas.height = image.height;
+            canvas.width = image.width; canvas.height = image.height;
             ctx.drawImage(image, 0, 0);
             ctx.font = "bold " + (canvas.width/20) + "px Arial";
             ctx.fillStyle = "rgba(255,255,255,0.7)";
             ctx.fillText("TWIYERNOST | " + handle, 20, canvas.height - 30);
-            
             const link = document.createElement('a');
             link.download = 'tviyernost_post.png';
             link.href = canvas.toDataURL();
@@ -277,26 +302,17 @@
         };
     }
 
-    function loadPosts() {
-        const posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
-        renderPosts(posts);
-    }
-
+    function loadPosts() { renderPosts(JSON.parse(localStorage.getItem('tviyerost_posts')) || []); }
     function logout() {
         document.getElementById('final-screen').style.display = 'flex';
-        setTimeout(() => {
-            localStorage.removeItem('tviyerost_user');
-            location.reload();
-        }, 2000);
+        setTimeout(() => { localStorage.removeItem('tviyerost_user'); location.reload(); }, 2000);
     }
-
     function showTab(id, el) {
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
         if(el) el.classList.add('active');
     }
-
     window.onload = updateUI;
 </script>
 </body>
