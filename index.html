@@ -1,9 +1,11 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Твиьерость</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-firestore-compat.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         :root {
@@ -14,12 +16,12 @@
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { margin: 0; background: var(--black); color: var(--white); overflow-x: hidden; }
 
-        /* Интерфейс */
         .app-container { display: flex; justify-content: center; max-width: 1250px; margin: 0 auto; }
         nav { width: 275px; padding: 10px; height: 100vh; position: sticky; top: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .logo { font-size: 30px; font-weight: 900; padding: 12px; cursor: pointer; color: var(--white); text-decoration: none; }
         .nav-link { display: flex; align-items: center; gap: 15px; padding: 12px; font-size: 20px; border-radius: 99px; cursor: pointer; transition: 0.2s; }
         .nav-link:hover { background: #181818; }
+        .nav-link.active { font-weight: bold; }
         
         main { width: 600px; min-height: 100vh; border-right: 1px solid var(--border); position: relative; }
         .header { padding: 15px; font-size: 20px; font-weight: bold; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 10; }
@@ -27,48 +29,81 @@
         .content-section { display: none; }
         .content-section.active { display: block; }
 
-        /* Посты */
         .post-input { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 15px; }
-        .avatar-sm { width: 48px; height: 48px; border-radius: 50%; background: #444; flex-shrink: 0; background-size: cover; }
+        .avatar-sm { width: 48px; height: 48px; border-radius: 50%; background: #444; flex-shrink: 0; background-size: cover; background-position: center; cursor: pointer; }
         textarea { width: 100%; background: none; border: none; color: white; font-size: 19px; outline: none; resize: none; padding-top: 10px; }
         
-        .post { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; position: relative; }
+        /* Стили для медиа в постах */
+        .post-media { width: 100%; border-radius: 16px; margin-top: 10px; border: 1px solid var(--border); max-height: 500px; object-fit: cover; }
+        
+        .post { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; position: relative; transition: 0.2s; }
         .post:hover { background: #080808; }
         .post-actions { display: flex; justify-content: space-between; color: var(--text-gray); max-width: 425px; margin-top: 10px; }
         .action-btn { cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.1s; border: none; background: none; color: inherit; padding: 0; }
-        .btn-delete { color: var(--text-gray); opacity: 0.5; cursor: pointer; position: absolute; top: 15px; right: 15px; }
+        .action-btn:hover { color: var(--accent); }
+        .btn-delete { color: var(--text-gray); opacity: 0.3; cursor: pointer; position: absolute; top: 15px; right: 15px; transition: 0.2s; }
         .btn-delete:hover { color: var(--red); opacity: 1; }
 
-        /* Модалки */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(91, 112, 131, 0.4); display: none; justify-content: center; align-items: center; z-index: 100; }
         .modal { background: black; width: 400px; border-radius: 16px; padding: 30px; text-align: center; border: 1px solid var(--border); }
         .btn-accent { background: var(--accent); color: white; border: none; border-radius: 99px; padding: 10px 20px; font-weight: bold; cursor: pointer; }
+        .btn-accent:disabled { opacity: 0.5; }
 
-        @media (max-width: 600px) {
-            nav { display: none; } main { width: 100%; }
-            .mobile-nav { display: flex; position: fixed; bottom: 0; width: 100%; background: black; border-top: 1px solid var(--border); justify-content: space-around; padding: 15px; z-index: 20; }
-        }
+        /* Концовка */
+        #final-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
+
         .mobile-nav { display: none; }
+
+        @media (max-width: 1000px) { nav { width: 80px; } .nav-text { display: none; } }
+        @media (max-width: 600px) {
+            nav { display: none; }
+            main { width: 100%; border: none; }
+            .mobile-nav { 
+                display: flex; position: fixed; bottom: 0; width: 100%; 
+                background: black; border-top: 1px solid var(--border); 
+                justify-content: space-around; padding: 15px; z-index: 20;
+            }
+            .app-container { padding-bottom: 60px; }
+        }
     </style>
 </head>
 <body>
 
+<div id="final-screen">
+    <div style="font-size: 80px; font-weight: 900;">Т</div>
+    <h2 style="color: var(--accent);">TWIYERNOST</h2>
+</div>
+
 <div id="authModal" class="modal-overlay" style="display: flex;">
     <div class="modal">
-        <div style="font-size:40px; margin-bottom:10px;">Т</div>
+        <div style="font-size:40px; margin-bottom:10px; font-weight:900;">Т</div>
         <h2>Войти в Твиьерость</h2>
+        <p style="color: var(--text-gray)">Используйте аккаунт Google</p>
         <div style="margin-top: 25px; display: flex; justify-content: center;">
-            <div id="g_id_onload" data-client_id="254609526549-srv2qeo7otu12op9eh9qfkf0h8lpgck9.apps.googleusercontent.com" data-callback="onGoogleSignIn"></div>
-            <div class="g_id_signin" data-type="standard"></div>
+            <div id="g_id_onload"
+                 data-client_id="254609526549-srv2qeo7otu12op9eh9qfkf0h8lpgck9.apps.googleusercontent.com"
+                 data-callback="onGoogleSignIn">
+            </div>
+            <div class="g_id_signin" data-type="standard" data-shape="pill"></div>
         </div>
+    </div>
+</div>
+
+<div id="editProfileModal" class="modal-overlay">
+    <div class="modal">
+        <h3>Изменить профиль</h3>
+        <input type="text" id="editName" placeholder="Имя" style="width:100%; padding:10px; margin-bottom:10px; background:#111; color:white; border:1px solid #333;">
+        <textarea id="editBio" placeholder="О себе" style="width:100%; padding:10px; margin-bottom:10px; background:#111; color:white; border:1px solid #333;"></textarea>
+        <button class="btn-accent" onclick="saveProfile()">Сохранить</button>
+        <button class="btn-accent" style="background:none;" onclick="document.getElementById('editProfileModal').style.display='none'">Отмена</button>
     </div>
 </div>
 
 <div class="app-container">
     <nav>
-        <div class="logo">Т</div>
-        <div class="nav-link active" onclick="showTab('feed', this)">🏠 <span class="nav-text">Лента</span></div>
-        <div class="nav-link" onclick="showTab('profile', this)">👤 <span class="nav-text">Профиль</span></div>
+        <div class="logo" onclick="showTab('feed')">Т</div>
+        <div class="nav-link active" id="link-feed" onclick="showTab('feed', this)">🏠 <span class="nav-text">Главная</span></div>
+        <div class="nav-link" id="link-profile" onclick="showTab('profile', this)">👤 <span class="nav-text">Профиль</span></div>
     </nav>
 
     <main>
@@ -77,7 +112,11 @@
             <div class="post-input">
                 <div class="avatar-sm my-pic"></div>
                 <div style="flex:1">
-                    <textarea id="postText" placeholder="Что нового?" rows="2"></textarea>
+                    <textarea id="postText" placeholder="Что происходит?" rows="2"></textarea>
+                    <div style="margin: 10px 0;">
+                        <label style="cursor:pointer; color:var(--accent);">🖼️ Фото/Видео <input type="file" id="postFile" accept="image/*,video/*" style="display:none;" onchange="handleFile(this)"></label>
+                        <span id="fileName" style="font-size:12px; color:var(--text-gray); margin-left:10px;"></span>
+                    </div>
                     <button class="btn-accent" style="float:right;" onclick="publishPost()">Пост</button>
                 </div>
             </div>
@@ -86,19 +125,37 @@
 
         <div id="profile" class="content-section">
             <div class="header">Профиль</div>
-            <div style="padding: 20px; text-align: center;">
-                <div class="avatar-sm my-pic" style="width:100px; height:100px; margin:0 auto;"></div>
-                <h2 id="prof-name">Гость</h2>
-                <p id="prof-handle" style="color:var(--text-gray)">@guest</p>
-                <button class="btn-accent" onclick="logout()">Выйти</button>
+            <div style="padding: 30px; text-align: center; border-bottom: 1px solid var(--border);">
+                <div class="avatar-sm my-pic" style="width:120px; height:120px; margin:0 auto; border: 4px solid var(--border);"></div>
+                <h2 id="prof-name" style="margin-top:15px; margin-bottom:0;">Гость</h2>
+                <p id="prof-handle" style="color:var(--text-gray); margin-top:5px;">@guest</p>
+                <p id="prof-bio" style="font-size:14px; color:var(--white);"></p>
+                <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
+                    <button class="btn-accent" onclick="document.getElementById('editProfileModal').style.display='flex'">Изменить</button>
+                    <button class="btn-accent" style="background:#fff; color:#000;" onclick="logout()">Выйти</button>
+                </div>
             </div>
+            <div id="userPosts"></div>
         </div>
     </main>
 </div>
 
+<div class="mobile-nav">
+    <span onclick="showTab('feed')">🏠</span>
+    <span onclick="showTab('profile')">👤</span>
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
 <script>
-    let userData = JSON.parse(localStorage.getItem('tviyerost_user')) || { loggedIn: false, name: "Гость", handle: "@guest", img: "" };
-    let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
+    // Настройки Firebase (для того чтобы разные пользователи видели друг друга)
+    // ТУТ НУЖНО ВСТАВИТЬ СВОИ КЛЮЧИ FIREBASE ДЛЯ ОБЩЕЙ ЛЕНТЫ
+    const firebaseConfig = { apiKey: "AIza...", projectId: "tviyerost", appId: "1:..." };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let userData = JSON.parse(localStorage.getItem('tviyerost_user')) || { loggedIn: false, name: "Гость", handle: "@guest", img: "", bio: "" };
+    let tempMedia = null;
 
     function onGoogleSignIn(response) {
         const payload = JSON.parse(atob(response.credential.split('.')[1]));
@@ -106,27 +163,44 @@
             loggedIn: true, 
             name: payload.name, 
             handle: "@" + payload.given_name.toLowerCase(), 
-            img: payload.picture 
+            img: payload.picture,
+            bio: ""
         };
         localStorage.setItem('tviyerost_user', JSON.stringify(userData));
         updateUI();
-        document.getElementById('authModal').style.display = 'none';
     }
 
     function updateUI() {
         document.getElementById('prof-name').innerText = userData.name;
         document.getElementById('prof-handle').innerText = userData.handle;
+        document.getElementById('prof-bio').innerText = userData.bio || "";
         document.querySelectorAll('.my-pic').forEach(el => {
             el.style.backgroundImage = `url(${userData.img})`;
-            el.style.backgroundSize = 'cover';
         });
-        renderPosts();
         if(userData.loggedIn) document.getElementById('authModal').style.display = 'none';
+        loadPosts();
     }
 
-    function publishPost() {
+    function handleFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+        document.getElementById('fileName').innerText = file.name;
+        const reader = new FileReader();
+        reader.onload = (e) => tempMedia = { data: e.target.result, type: file.type };
+        reader.readAsDataURL(file);
+    }
+
+    function saveProfile() {
+        userData.name = document.getElementById('editName').value;
+        userData.bio = document.getElementById('editBio').value;
+        localStorage.setItem('tviyerost_user', JSON.stringify(userData));
+        document.getElementById('editProfileModal').style.display = 'none';
+        updateUI();
+    }
+
+    async function publishPost() {
         const txt = document.getElementById('postText').value;
-        if(!txt.trim() || !userData.loggedIn) return;
+        if(!txt.trim() && !tempMedia || !userData.loggedIn) return;
 
         const newPost = {
             id: Date.now(),
@@ -134,43 +208,45 @@
             userName: userData.name,
             userHandle: userData.handle,
             userImg: userData.img,
+            media: tempMedia,
             date: new Date().toLocaleString()
         };
 
+        // Сохраняем в Firebase для общей ленты (если настроено) или в LocalStorage
+        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         posts.unshift(newPost);
         localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
+        
+        // Очистка
         document.getElementById('postText').value = "";
-        renderPosts();
+        document.getElementById('fileName').innerText = "";
+        tempMedia = null;
+        renderPosts(posts);
     }
 
-    function deletePost(id) {
-        posts = posts.filter(p => p.id !== id);
-        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
-        renderPosts();
-    }
-
-    function sharePost(id) {
-        const url = window.location.href.split('?')[0] + "?post=" + id;
-        navigator.clipboard.writeText(url);
-        alert("Ссылка на пост скопирована!");
-    }
-
-    function renderPosts() {
+    function renderPosts(postsToRender) {
         const container = document.getElementById('feedPosts');
         container.innerHTML = "";
-        posts.forEach(p => {
+        postsToRender.forEach(p => {
+            let mediaHtml = "";
+            if(p.media) {
+                if(p.media.type.includes('image')) mediaHtml = `<img src="${p.media.data}" class="post-media" id="img-${p.id}">`;
+                else mediaHtml = `<video src="${p.media.data}" class="post-media" controls></video>`;
+            }
+
             container.innerHTML += `
-                <div class="post" id="p-${p.id}">
-                    <div class="avatar-sm" style="background-image:url(${p.userImg});"></div>
+                <div class="post">
+                    <div class="avatar-sm" style="background-image:url(${p.userImg});" onclick="openProfile('${p.userHandle}')"></div>
                     <div style="flex:1">
                         <span class="btn-delete" onclick="deletePost(${p.id})">🗑️</span>
                         <b>${p.userName}</b> <span style="color:var(--text-gray)">${p.userHandle} · ${p.date}</span>
-                        <div style="margin-top:5px;">${p.text}</div>
+                        <div style="margin-top:8px; font-size:18px;">${p.text}</div>
+                        ${mediaHtml}
                         <div class="post-actions">
                             <button class="action-btn">💬 0</button>
                             <button class="action-btn">🔁 0</button>
                             <button class="action-btn">❤️ 0</button>
-                            <button class="action-btn" onclick="sharePost(${p.id})">📤</button>
+                            <button class="action-btn" onclick="downloadWithWatermark(${p.id}, '${p.userHandle}')">📥</button>
                         </div>
                     </div>
                 </div>
@@ -178,23 +254,50 @@
         });
     }
 
+    function downloadWithWatermark(postId, handle) {
+        const img = document.getElementById('img-' + postId);
+        if(!img) return alert("Только для фото");
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const image = new Image();
+        image.src = img.src;
+        image.onload = () => {
+            canvas.width = image.width;
+            canvas.height = image.height;
+            ctx.drawImage(image, 0, 0);
+            ctx.font = "bold " + (canvas.width/20) + "px Arial";
+            ctx.fillStyle = "rgba(255,255,255,0.7)";
+            ctx.fillText("TWIYERNOST | " + handle, 20, canvas.height - 30);
+            
+            const link = document.createElement('a');
+            link.download = 'tviyernost_post.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        };
+    }
+
+    function loadPosts() {
+        const posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
+        renderPosts(posts);
+    }
+
     function logout() {
-        localStorage.removeItem('tviyerost_user');
-        location.reload();
+        document.getElementById('final-screen').style.display = 'flex';
+        setTimeout(() => {
+            localStorage.removeItem('tviyerost_user');
+            location.reload();
+        }, 2000);
     }
 
     function showTab(id, el) {
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        if(el) {
-            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-            el.classList.add('active');
-        }
+        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+        if(el) el.classList.add('active');
     }
 
-    // Инициализация
     window.onload = updateUI;
 </script>
-
 </body>
 </html>
