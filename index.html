@@ -39,30 +39,26 @@
         .post:hover { background: #080808; }
         .post-actions { display: flex; justify-content: space-between; color: var(--text-gray); max-width: 425px; margin-top: 10px; }
         .action-btn { cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.1s; border: none; background: none; color: inherit; padding: 0; }
-        .action-btn:hover { color: var(--accent); }
-        .btn-delete { color: var(--text-gray); opacity: 0.3; cursor: pointer; position: absolute; top: 15px; right: 15px; transition: 0.2s; }
+        
+        .btn-delete { color: var(--text-gray); opacity: 0.3; cursor: pointer; position: absolute; top: 15px; right: 15px; transition: 0.2s; z-index: 5; }
         .btn-delete:hover { color: var(--red); opacity: 1; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(91, 112, 131, 0.4); display: none; justify-content: center; align-items: center; z-index: 100; }
         .modal { background: black; width: 500px; border-radius: 16px; padding: 20px; border: 1px solid var(--border); max-height: 90vh; overflow-y: auto; }
         .btn-accent { background: var(--accent); color: white; border: none; border-radius: 99px; padding: 10px 20px; font-weight: bold; cursor: pointer; }
         
-        /* Стили полей ввода настроек */
         .edit-field { width: 100%; padding: 12px; margin-bottom: 20px; background: black; border: 1px solid var(--border); color: white; border-radius: 4px; font-size: 16px; }
-        .edit-field:focus { border-color: var(--accent); outline: none; }
         .label-text { display: block; text-align: left; color: var(--text-gray); font-size: 13px; margin-bottom: 5px; }
 
         #final-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
 
         .mobile-nav { display: none; }
 
-        @media (max-width: 1000px) { nav { width: 80px; } .nav-text { display: none; } }
         @media (max-width: 600px) {
             nav { display: none; }
             main { width: 100%; border: none; }
             .mobile-nav { display: flex; position: fixed; bottom: 0; width: 100%; background: black; border-top: 1px solid var(--border); justify-content: space-around; padding: 15px; z-index: 20; }
             .app-container { padding-bottom: 60px; }
-            .modal { width: 95%; }
         }
     </style>
 </head>
@@ -91,7 +87,7 @@
             <button class="btn-accent" onclick="saveProfile()">Сохранить</button>
         </div>
         
-        <div style="text-align: center; margin-bottom: 20px; position: relative;">
+        <div style="text-align: center; margin-bottom: 20px;">
             <div id="edit-avatar-preview" class="avatar-sm" style="width:100px; height:100px; margin:0 auto; border: 2px solid var(--accent);"></div>
             <label style="display:block; margin-top:10px; color:var(--accent); cursor:pointer;">
                 Изменить фото <input type="file" accept="image/*" style="display:none;" onchange="previewNewAvatar(this)">
@@ -100,6 +96,9 @@
 
         <span class="label-text">Имя</span>
         <input type="text" id="editName" class="edit-field">
+
+        <span class="label-text">Имя пользователя (Никнейм)</span>
+        <input type="text" id="editHandle" class="edit-field" placeholder="@username">
 
         <span class="label-text">О себе</span>
         <textarea id="editBio" class="edit-field" rows="3"></textarea>
@@ -110,6 +109,7 @@
         <span class="label-text">Веб-сайт</span>
         <input type="text" id="editWebsite" class="edit-field">
 
+        <button class="btn-accent" style="background:none; border:1px solid var(--red); color:var(--red); width:100%; margin-bottom: 10px;" onclick="deleteAccount()">Удалить аккаунт</button>
         <button class="btn-accent" style="background:none; border:1px solid var(--border); width:100%;" onclick="document.getElementById('editProfileModal').style.display='none'">Отмена</button>
     </div>
 </div>
@@ -154,7 +154,7 @@
                 </div>
                 <button class="btn-accent" style="margin-top:20px; background:#fff; color:#000; width: 100%;" onclick="logout()">Выйти</button>
             </div>
-            <div id="userPosts"></div>
+            <div id="userPostsList"></div>
         </div>
     </main>
 </div>
@@ -167,10 +167,6 @@
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-    const firebaseConfig = { apiKey: "AIza...", projectId: "tviyerost", appId: "1:..." };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
     let userData = JSON.parse(localStorage.getItem('tviyerost_user')) || { loggedIn: false, name: "Гость", handle: "@guest", img: "", bio: "", location: "", website: "" };
     let tempMedia = null;
     let tempNewAvatar = null;
@@ -191,15 +187,14 @@
         web.innerText = userData.website ? "🔗 " + userData.website : "";
         web.href = userData.website ? (userData.website.startsWith('http') ? userData.website : 'https://'+userData.website) : "#";
 
-        document.querySelectorAll('.my-pic').forEach(el => {
-            el.style.backgroundImage = `url(${userData.img})`;
-        });
+        document.querySelectorAll('.my-pic').forEach(el => { el.style.backgroundImage = `url(${userData.img})`; });
         if(userData.loggedIn) document.getElementById('authModal').style.display = 'none';
         loadPosts();
     }
 
     function openEditModal() {
         document.getElementById('editName').value = userData.name;
+        document.getElementById('editHandle').value = userData.handle;
         document.getElementById('editBio').value = userData.bio || "";
         document.getElementById('editLocation').value = userData.location || "";
         document.getElementById('editWebsite').value = userData.website || "";
@@ -221,6 +216,8 @@
 
     function saveProfile() {
         userData.name = document.getElementById('editName').value;
+        let newHandle = document.getElementById('editHandle').value;
+        userData.handle = newHandle.startsWith('@') ? newHandle : '@' + newHandle;
         userData.bio = document.getElementById('editBio').value;
         userData.location = document.getElementById('editLocation').value;
         userData.website = document.getElementById('editWebsite').value;
@@ -241,11 +238,21 @@
         }
     }
 
-    async function publishPost() {
+    function publishPost() {
         const txt = document.getElementById('postText').value;
         if(!txt.trim() && !tempMedia || !userData.loggedIn) return;
 
-        const newPost = { id: Date.now(), text: txt, userName: userData.name, userHandle: userData.handle, userImg: userData.img, media: tempMedia, date: new Date().toLocaleString() };
+        const newPost = { 
+            id: Date.now(), 
+            text: txt, 
+            userName: userData.name, 
+            userHandle: userData.handle, 
+            userImg: userData.img, 
+            media: tempMedia, 
+            date: new Date().toLocaleString(),
+            likes: 0,
+            reposts: 0
+        };
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         posts.unshift(newPost);
         localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
@@ -257,16 +264,14 @@
     }
 
     function renderPosts(postsToRender) {
-        const container = document.getElementById('feedPosts');
-        container.innerHTML = "";
+        const containers = [document.getElementById('feedPosts'), document.getElementById('userPostsList')];
+        containers.forEach(c => { if(c) c.innerHTML = ""; });
+
         postsToRender.forEach(p => {
-            let mediaHtml = "";
-            if(p.media) {
-                if(p.media.type.includes('image')) mediaHtml = `<img src="${p.media.data}" class="post-media" id="img-${p.id}">`;
-                else mediaHtml = `<video src="${p.media.data}" class="post-media" controls></video>`;
-            }
-            container.innerHTML += `
-                <div class="post">
+            let mediaHtml = p.media ? (p.media.type.includes('image') ? `<img src="${p.media.data}" class="post-media" id="img-${p.id}">` : `<video src="${p.media.data}" class="post-media" controls></video>`) : "";
+            
+            const postHtml = `
+                <div class="post" id="post-${p.id}">
                     <div class="avatar-sm" style="background-image:url(${p.userImg});"></div>
                     <div style="flex:1">
                         <span class="btn-delete" onclick="deletePost(${p.id})">🗑️</span>
@@ -274,12 +279,45 @@
                         <div style="margin-top:8px; font-size:18px;">${p.text}</div>
                         ${mediaHtml}
                         <div class="post-actions">
-                            <button class="action-btn">💬 0</button><button class="action-btn">🔁 0</button><button class="action-btn">❤️ 0</button>
+                            <button class="action-btn" onclick="interact(${p.id}, 'comments')">💬 0</button>
+                            <button class="action-btn" onclick="interact(${p.id}, 'reposts', this, 'var(--green)')">🔁 ${p.reposts || 0}</button>
+                            <button class="action-btn" onclick="interact(${p.id}, 'likes', this, 'var(--red)')">❤️ ${p.likes || 0}</button>
                             <button class="action-btn" onclick="downloadWithWatermark(${p.id}, '${p.userHandle}')">📥</button>
                         </div>
                     </div>
                 </div>`;
+            if(containers[0]) containers[0].innerHTML += postHtml;
+            if(containers[1] && p.userHandle === userData.handle) containers[1].innerHTML += postHtml;
         });
+    }
+
+    function interact(id, type, el, color) {
+        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
+        const post = posts.find(p => p.id === id);
+        if(post && type !== 'comments') {
+            post[type] = (post[type] || 0) + 1;
+            localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
+            if(el) {
+                el.style.color = color;
+                el.innerHTML = (type === 'likes' ? '❤️ ' : '🔁 ') + post[type];
+            }
+        }
+    }
+
+    function deletePost(id) {
+        if(confirm("Удалить этот пост?")) {
+            let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
+            posts = posts.filter(p => p.id !== id);
+            localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
+            renderPosts(posts);
+        }
+    }
+
+    function deleteAccount() {
+        if(confirm("ВНИМАНИЕ! Вы уверены, что хотите удалить аккаунт? Все ваши посты и данные будут стерты навсегда.")) {
+            localStorage.clear();
+            location.reload();
+        }
     }
 
     function downloadWithWatermark(postId, handle) {
@@ -303,10 +341,7 @@
     }
 
     function loadPosts() { renderPosts(JSON.parse(localStorage.getItem('tviyerost_posts')) || []); }
-    function logout() {
-        document.getElementById('final-screen').style.display = 'flex';
-        setTimeout(() => { localStorage.removeItem('tviyerost_user'); location.reload(); }, 2000);
-    }
+    function logout() { document.getElementById('final-screen').style.display = 'flex'; setTimeout(() => { location.reload(); }, 2000); }
     function showTab(id, el) {
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
