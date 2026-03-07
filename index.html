@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -14,107 +14,52 @@
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { margin: 0; background: var(--black); color: var(--white); overflow-x: hidden; }
 
-        /* СЕТКА ПРИЛОЖЕНИЯ */
+        /* Интерфейс */
         .app-container { display: flex; justify-content: center; max-width: 1250px; margin: 0 auto; }
-        
-        /* SIDEBAR (ПК) */
         nav { width: 275px; padding: 10px; height: 100vh; position: sticky; top: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .logo { font-size: 30px; font-weight: 900; padding: 12px; cursor: pointer; color: var(--white); text-decoration: none; }
         .nav-link { display: flex; align-items: center; gap: 15px; padding: 12px; font-size: 20px; border-radius: 99px; cursor: pointer; transition: 0.2s; }
         .nav-link:hover { background: #181818; }
-        .nav-link.active { font-weight: bold; }
-
-        /* ОСНОВНАЯ ЛЕНТА */
+        
         main { width: 600px; min-height: 100vh; border-right: 1px solid var(--border); position: relative; }
-        .header { 
-            padding: 15px; font-size: 20px; font-weight: bold; border-bottom: 1px solid var(--border); 
-            position: sticky; top: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 10; 
-        }
+        .header { padding: 15px; font-size: 20px; font-weight: bold; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 10; }
         
         .content-section { display: none; }
         .content-section.active { display: block; }
 
-        /* ПРОФИЛЬ */
-        .profile-banner { height: 200px; background: #333; position: relative; }
-        .profile-avatar { 
-            width: 135px; height: 135px; border-radius: 50%; border: 4px solid black; 
-            background: #555; position: absolute; bottom: -67px; left: 15px; 
-            background-size: cover; background-position: center;
-        }
-        .profile-content { padding: 15px; margin-top: 60px; }
-        .profile-content h2 { margin: 0; font-size: 22px; }
-        .user-handle { color: var(--text-gray); margin-bottom: 10px; display: block; }
-        
-        /* КНОПКИ */
-        .btn { border: none; border-radius: 99px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-accent { background: var(--accent); color: white; padding: 12px 24px; font-size: 16px; width: 100%; margin-top: 15px; }
-        .btn-outline { background: none; border: 1px solid var(--border); color: white; padding: 8px 16px; }
-        .btn-outline:hover { background: #181818; }
-
-        /* ПОСТЫ */
+        /* Посты */
         .post-input { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 15px; }
-        .avatar-sm { width: 48px; height: 48px; border-radius: 50%; background: #444; flex-shrink: 0; }
+        .avatar-sm { width: 48px; height: 48px; border-radius: 50%; background: #444; flex-shrink: 0; background-size: cover; }
         textarea { width: 100%; background: none; border: none; color: white; font-size: 19px; outline: none; resize: none; padding-top: 10px; }
         
-        .post { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; }
+        .post { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; position: relative; }
+        .post:hover { background: #080808; }
         .post-actions { display: flex; justify-content: space-between; color: var(--text-gray); max-width: 425px; margin-top: 10px; }
-        .action-btn { cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.1s; }
-        .action-btn:hover { color: var(--accent); }
+        .action-btn { cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.1s; border: none; background: none; color: inherit; padding: 0; }
+        .btn-delete { color: var(--text-gray); opacity: 0.5; cursor: pointer; position: absolute; top: 15px; right: 15px; }
+        .btn-delete:hover { color: var(--red); opacity: 1; }
 
-        /* МОДАЛЬНОЕ ОКНО */
+        /* Модалки */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(91, 112, 131, 0.4); display: none; justify-content: center; align-items: center; z-index: 100; }
-        .modal { background: black; width: 600px; border-radius: 16px; overflow: hidden; }
-        .modal-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-        .modal-body { padding: 20px; }
-        .field { margin-bottom: 20px; border: 1px solid var(--border); padding: 8px; border-radius: 4px; }
-        .field label { display: block; color: var(--text-gray); font-size: 13px; }
-        .field input { background: none; border: none; color: white; width: 100%; font-size: 17px; outline: none; }
+        .modal { background: black; width: 400px; border-radius: 16px; padding: 30px; text-align: center; border: 1px solid var(--border); }
+        .btn-accent { background: var(--accent); color: white; border: none; border-radius: 99px; padding: 10px 20px; font-weight: bold; cursor: pointer; }
 
-        /* МОБИЛЬНАЯ ВЕРСИЯ */
-        .mobile-nav { display: none; }
-        @media (max-width: 1000px) { nav { width: 80px; } .nav-text { display: none; } }
         @media (max-width: 600px) {
-            nav { display: none; }
-            main { width: 100%; border: none; }
-            .mobile-nav { 
-                display: flex; position: fixed; bottom: 0; width: 100%; 
-                background: black; border-top: 1px solid var(--border); 
-                justify-content: space-around; padding: 15px; z-index: 20;
-            }
-            .app-container { padding-bottom: 60px; }
-            .modal { width: 100%; height: 100%; border-radius: 0; }
+            nav { display: none; } main { width: 100%; }
+            .mobile-nav { display: flex; position: fixed; bottom: 0; width: 100%; background: black; border-top: 1px solid var(--border); justify-content: space-around; padding: 15px; z-index: 20; }
         }
+        .mobile-nav { display: none; }
     </style>
 </head>
 <body>
 
 <div id="authModal" class="modal-overlay" style="display: flex;">
-    <div class="modal" style="width: 400px; text-align: center; padding: 30px;">
-        <div class="logo">Т</div>
-        <h2>Войти в Твиьерость</h2>
-        <p style="color: var(--text-gray)">Используйте Google для входа</p>
-        <div style="margin-top: 25px; display: flex; justify-content: center;">
-            <div id="g_id_onload"
-                 data-client_id="254609526549-srv2qeo7otu12op9eh9qfkf0h8lpgck9.apps.googleusercontent.com"
-                 data-callback="onGoogleSignIn">
-            </div>
-            <div class="g_id_signin" data-type="standard" data-shape="pill"></div>
-        </div>
-    </div>
-</div>
-
-<div id="editModal" class="modal-overlay">
     <div class="modal">
-        <div class="modal-header">
-            <span onclick="toggleModal('editModal')" style="cursor:pointer">✕</span>
-            <b>Изменить профиль</b>
-            <button class="btn-outline" style="background:white; color:black; border:none;" onclick="saveProfile()">Сохранить</button>
-        </div>
-        <div class="modal-body">
-            <div class="field"><label>Имя</label><input type="text" id="in-name"></div>
-            <div class="field"><label>О себе</label><input type="text" id="in-bio"></div>
-            <div class="field"><label>Местоположение</label><input type="text" id="in-loc"></div>
-            <div class="field"><label>Сайт</label><input type="text" id="in-web"></div>
+        <div style="font-size:40px; margin-bottom:10px;">Т</div>
+        <h2>Войти в Твиьерость</h2>
+        <div style="margin-top: 25px; display: flex; justify-content: center;">
+            <div id="g_id_onload" data-client_id="254609526549-srv2qeo7otu12op9eh9qfkf0h8lpgck9.apps.googleusercontent.com" data-callback="onGoogleSignIn"></div>
+            <div class="g_id_signin" data-type="standard"></div>
         </div>
     </div>
 </div>
@@ -122,10 +67,8 @@
 <div class="app-container">
     <nav>
         <div class="logo">Т</div>
-        <div class="nav-link active" onclick="showTab('feed', this)">🏠 <span class="nav-text">Главная</span></div>
-        <div class="nav-link" onclick="showTab('explore', this)">🔍 <span class="nav-text">Поиск</span></div>
+        <div class="nav-link active" onclick="showTab('feed', this)">🏠 <span class="nav-text">Лента</span></div>
         <div class="nav-link" onclick="showTab('profile', this)">👤 <span class="nav-text">Профиль</span></div>
-        <button class="btn btn-accent"><span class="nav-text">Твиьеростнуть</span></button>
     </nav>
 
     <main>
@@ -134,8 +77,8 @@
             <div class="post-input">
                 <div class="avatar-sm my-pic"></div>
                 <div style="flex:1">
-                    <textarea id="postText" placeholder="Что происходит?" rows="2"></textarea>
-                    <button class="btn btn-accent" style="width:auto; float:right; margin-top:0" onclick="publishPost()">Пост</button>
+                    <textarea id="postText" placeholder="Что нового?" rows="2"></textarea>
+                    <button class="btn-accent" style="float:right;" onclick="publishPost()">Пост</button>
                 </div>
             </div>
             <div id="feedPosts"></div>
@@ -143,105 +86,114 @@
 
         <div id="profile" class="content-section">
             <div class="header">Профиль</div>
-            <div class="profile-banner">
-                <div class="profile-avatar" id="prof-pic"></div>
-            </div>
-            <div style="display:flex; justify-content:flex-end; padding:15px;">
-                <button class="btn-outline" onclick="toggleModal('editModal')">Изменить профиль</button>
-            </div>
-            <div class="profile-content">
+            <div style="padding: 20px; text-align: center;">
+                <div class="avatar-sm my-pic" style="width:100px; height:100px; margin:0 auto;"></div>
                 <h2 id="prof-name">Гость</h2>
-                <span class="user-handle" id="prof-handle">@guest</span>
-                <p id="prof-bio">Нет описания</p>
-                <div style="color: var(--text-gray); font-size: 14px; display:flex; gap:15px;">
-                    <span id="prof-loc">📍 Земля</span>
-                    <span id="prof-web">🔗 tviyerost.ru</span>
-                </div>
+                <p id="prof-handle" style="color:var(--text-gray)">@guest</p>
+                <button class="btn-accent" onclick="logout()">Выйти</button>
             </div>
         </div>
     </main>
 </div>
 
-<div class="mobile-nav">
-    <span onclick="showTab('feed')">🏠</span>
-    <span onclick="showTab('explore')">🔍</span>
-    <span onclick="showTab('profile')">👤</span>
-</div>
-
 <script>
-    let userData = { name: "Гость", handle: "@guest", img: "" };
+    let userData = JSON.parse(localStorage.getItem('tviyerost_user')) || { loggedIn: false, name: "Гость", handle: "@guest", img: "" };
+    let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
 
-    // ВХОД ЧЕРЕЗ GOOGLE
     function onGoogleSignIn(response) {
-        const base64Url = response.credential.split('.')[1];
-        const payload = JSON.parse(window.atob(base64Url));
-        
-        userData.name = payload.name;
-        userData.handle = "@" + payload.given_name.toLowerCase();
-        userData.img = payload.picture;
-
-        // Обновляем UI
-        document.getElementById('prof-name').innerText = userData.name;
-        document.getElementById('prof-handle').innerText = userData.handle;
-        document.getElementById('prof-pic').style.backgroundImage = `url(${userData.img})`;
-        document.querySelectorAll('.my-pic').forEach(el => el.style.backgroundImage = `url(${userData.img})`);
-        document.querySelectorAll('.my-pic').forEach(el => el.style.backgroundSize = `cover`);
-
-        // Предзаполняем инпуты настроек
-        document.getElementById('in-name').value = userData.name;
-
-        toggleModal('authModal');
+        const payload = JSON.parse(atob(response.credential.split('.')[1]));
+        userData = { 
+            loggedIn: true, 
+            name: payload.name, 
+            handle: "@" + payload.given_name.toLowerCase(), 
+            img: payload.picture 
+        };
+        localStorage.setItem('tviyerost_user', JSON.stringify(userData));
+        updateUI();
+        document.getElementById('authModal').style.display = 'none';
     }
 
-    // НАВИГАЦИЯ
-    function showTab(tabId, el) {
+    function updateUI() {
+        document.getElementById('prof-name').innerText = userData.name;
+        document.getElementById('prof-handle').innerText = userData.handle;
+        document.querySelectorAll('.my-pic').forEach(el => {
+            el.style.backgroundImage = `url(${userData.img})`;
+            el.style.backgroundSize = 'cover';
+        });
+        renderPosts();
+        if(userData.loggedIn) document.getElementById('authModal').style.display = 'none';
+    }
+
+    function publishPost() {
+        const txt = document.getElementById('postText').value;
+        if(!txt.trim() || !userData.loggedIn) return;
+
+        const newPost = {
+            id: Date.now(),
+            text: txt,
+            userName: userData.name,
+            userHandle: userData.handle,
+            userImg: userData.img,
+            date: new Date().toLocaleString()
+        };
+
+        posts.unshift(newPost);
+        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
+        document.getElementById('postText').value = "";
+        renderPosts();
+    }
+
+    function deletePost(id) {
+        posts = posts.filter(p => p.id !== id);
+        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
+        renderPosts();
+    }
+
+    function sharePost(id) {
+        const url = window.location.href.split('?')[0] + "?post=" + id;
+        navigator.clipboard.writeText(url);
+        alert("Ссылка на пост скопирована!");
+    }
+
+    function renderPosts() {
+        const container = document.getElementById('feedPosts');
+        container.innerHTML = "";
+        posts.forEach(p => {
+            container.innerHTML += `
+                <div class="post" id="p-${p.id}">
+                    <div class="avatar-sm" style="background-image:url(${p.userImg});"></div>
+                    <div style="flex:1">
+                        <span class="btn-delete" onclick="deletePost(${p.id})">🗑️</span>
+                        <b>${p.userName}</b> <span style="color:var(--text-gray)">${p.userHandle} · ${p.date}</span>
+                        <div style="margin-top:5px;">${p.text}</div>
+                        <div class="post-actions">
+                            <button class="action-btn">💬 0</button>
+                            <button class="action-btn">🔁 0</button>
+                            <button class="action-btn">❤️ 0</button>
+                            <button class="action-btn" onclick="sharePost(${p.id})">📤</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function logout() {
+        localStorage.removeItem('tviyerost_user');
+        location.reload();
+    }
+
+    function showTab(id, el) {
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
+        document.getElementById(id).classList.add('active');
         if(el) {
             document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
             el.classList.add('active');
         }
-        window.scrollTo(0,0);
     }
 
-    // МОДАЛКИ
-    function toggleModal(id) {
-        const m = document.getElementById(id);
-        m.style.display = (m.style.display === 'flex') ? 'none' : 'flex';
-    }
-
-    // СОХРАНЕНИЕ ПРОФИЛЯ
-    function saveProfile() {
-        document.getElementById('prof-name').innerText = document.getElementById('in-name').value;
-        document.getElementById('prof-bio').innerText = document.getElementById('in-bio').value;
-        document.getElementById('prof-loc').innerText = "📍 " + document.getElementById('in-loc').value;
-        document.getElementById('prof-web').innerText = "🔗 " + document.getElementById('in-web').value;
-        toggleModal('editModal');
-    }
-
-    // ПУБЛИКАЦИЯ
-    function publishPost() {
-        const txt = document.getElementById('postText').value;
-        if(!txt.trim()) return;
-
-        const postHtml = `
-            <div class="post">
-                <div class="avatar-sm" style="background-image:url(${userData.img}); background-size:cover;"></div>
-                <div style="flex:1">
-                    <b>${userData.name}</b> <span style="color:var(--text-gray)">${userData.handle} · только что</span>
-                    <div style="margin-top:5px;">${txt}</div>
-                    <div class="post-actions">
-                        <div class="action-btn" onclick="this.style.color='var(--accent)'">💬 0</div>
-                        <div class="action-btn" onclick="this.style.color='var(--green)'">🔁 0</div>
-                        <div class="action-btn" onclick="this.style.color='var(--red)'">❤️ 0</div>
-                        <div class="action-btn">📊 1</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.getElementById('feedPosts').insertAdjacentHTML('afterbegin', postHtml);
-        document.getElementById('postText').value = "";
-    }
+    // Инициализация
+    window.onload = updateUI;
 </script>
 
 </body>
