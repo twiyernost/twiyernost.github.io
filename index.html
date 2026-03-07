@@ -1,587 +1,322 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Твиьерость</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <style>
-        :root {
-            --black: #000; --white: #eff3f4; --gray: #202327;
-            --accent: #1d9bf0; --border: #333639; --text-gray: #71767b;
-            --red: #f91880; --green: #00ba7c; --disabled: #444;
-        }
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { margin: 0; background: var(--black); color: var(--white); overflow-x: hidden; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Твиьерость</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
-        .app-container { display: flex; justify-content: center; max-width: 1250px; margin: 0 auto; }
-        nav { width: 275px; padding: 10px; height: 100vh; position: sticky; top: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .logo { font-size: 30px; font-weight: 900; padding: 12px; cursor: pointer; color: var(--white); text-decoration: none; }
-        .nav-link { display: flex; align-items: center; gap: 15px; padding: 12px; font-size: 20px; border-radius: 99px; cursor: pointer; transition: 0.2s; }
-        .nav-link:hover { background: #181818; }
-        .nav-link.active { font-weight: bold; }
-        
-        main { width: 600px; min-height: 100vh; border-right: 1px solid var(--border); position: relative; }
-        .header { padding: 15px; font-size: 20px; font-weight: bold; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(12px); z-index: 10; }
-        
-        .content-section { display: none; }
-        .content-section.active { display: block; }
+<style>
+:root{
+--black:#000;--white:#eff3f4;--gray:#202327;
+--accent:#1d9bf0;--border:#333639;--text-gray:#71767b;
+--red:#f91880;--green:#00ba7c;--disabled:#444;
+}
 
-        .post-input { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 15px; }
-        .avatar-sm { width: 48px; height: 48px; border-radius: 50%; background: #444; flex-shrink: 0; background-size: cover; background-position: center; cursor: pointer; }
-        textarea { width: 100%; background: none; border: none; color: white; font-size: 19px; outline: none; resize: none; padding-top: 10px; }
-        
-        .post-media { width: 100%; border-radius: 16px; margin-top: 10px; border: 1px solid var(--border); max-height: 500px; object-fit: cover; }
-        
-        .post { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; position: relative; transition: 0.2s; }
-        .post:hover { background: #080808; }
-        .post-actions { display: flex; justify-content: space-between; color: var(--text-gray); max-width: 425px; margin-top: 10px; }
-        .action-btn { cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.1s; border: none; background: none; color: inherit; padding: 0; }
-        
-        .btn-delete { color: var(--text-gray); opacity: 0.3; cursor: pointer; position: absolute; top: 15px; right: 15px; transition: 0.2s; z-index: 5; }
-        .btn-delete:hover { color: var(--red); opacity: 1; }
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+body{margin:0;background:var(--black);color:var(--white);overflow-x:hidden;}
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 100; }
-        .modal { background: black; width: 500px; border-radius: 16px; padding: 20px; border: 1px solid var(--border); max-height: 90vh; overflow-y: auto; }
-        .btn-accent { background: var(--accent); color: white; border: none; border-radius: 99px; padding: 10px 20px; font-weight: bold; cursor: pointer; }
-        .btn-accent:disabled { background: var(--disabled); cursor: not-allowed; }
-        
-        .edit-field { width: 100%; padding: 12px; margin-bottom: 20px; background: black; border: 1px solid var(--border); color: white; border-radius: 4px; font-size: 16px; }
-        .label-text { display: block; text-align: left; color: var(--text-gray); font-size: 13px; margin-bottom: 5px; }
+.app-container{display:flex;justify-content:center;max-width:1250px;margin:0 auto;}
 
-        #final-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
+nav{width:275px;padding:10px;height:100vh;position:sticky;top:0;border-right:1px solid var(--border);display:flex;flex-direction:column;}
 
-        .mobile-nav { display: none; }
+.logo{font-size:30px;font-weight:900;padding:12px;cursor:pointer;color:var(--white);text-decoration:none;}
 
-        .comment-section {
-            margin: 8px 0 4px;
-            font-size: 14px;
-        }
-        .comment {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin: 4px 0;
-            padding: 2px 0;
-        }
-        .comment-content {
-            flex: 1;
-        }
-        .comment-author {
-            font-weight: 600;
-            margin-right: 6px;
-        }
-        .comment-date {
-            color: var(--text-gray);
-            font-size: 12px;
-        }
-        .comment-text {
-            color: var(--white);
-        }
-        .delete-comment {
-            color: var(--text-gray);
-            font-size: 12px;
-            cursor: pointer;
-            opacity: 0.6;
-            margin-left: 8px;
-        }
-        .delete-comment:hover {
-            color: var(--red);
-            opacity: 1;
-        }
-        .comment-input-area {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-            align-items: center;
-        }
-        .comment-input {
-            flex: 1;
-            background: none;
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 6px 14px;
-            color: white;
-            font-size: 14px;
-            outline: none;
-            resize: none;
-            height: 32px;
-        }
-        .comment-btn {
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 99px;
-            padding: 6px 14px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 14px;
-        }
+.nav-link{display:flex;align-items:center;gap:15px;padding:12px;font-size:20px;border-radius:99px;cursor:pointer;transition:0.2s;}
+.nav-link:hover{background:#181818;}
+.nav-link.active{font-weight:bold;}
 
-        @media (max-width: 1000px) { nav { width: 80px; } .nav-text { display: none; } }
-        @media (max-width: 600px) {
-            nav { display: none; }
-            main { width: 100%; border: none; }
-            .mobile-nav { display: flex; position: fixed; bottom: 0; width: 100%; background: black; border-top: 1px solid var(--border); justify-content: space-around; padding: 15px; z-index: 20; }
-            .app-container { padding-bottom: 80px; }
-        }
-    </style>
+main{width:600px;min-height:100vh;border-right:1px solid var(--border);position:relative;}
+
+.header{padding:15px;font-size:20px;font-weight:bold;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);z-index:10;}
+
+.content-section{display:none;}
+.content-section.active{display:block;}
+
+.post-input{padding:15px;border-bottom:1px solid var(--border);display:flex;gap:15px;}
+
+.avatar-sm{width:48px;height:48px;border-radius:50%;background:#444;flex-shrink:0;background-size:cover;background-position:center;cursor:pointer;}
+
+textarea{width:100%;background:none;border:none;color:white;font-size:19px;outline:none;resize:none;padding-top:10px;}
+
+.post-media{width:100%;border-radius:16px;margin-top:10px;border:1px solid var(--border);max-height:500px;object-fit:cover;}
+
+.post{padding:15px;border-bottom:1px solid var(--border);display:flex;gap:12px;position:relative;transition:0.2s;}
+.post:hover{background:#080808;}
+
+.post-actions{display:flex;justify-content:space-between;color:var(--text-gray);max-width:425px;margin-top:10px;}
+
+.action-btn{cursor:pointer;display:flex;align-items:center;gap:5px;transition:0.1s;border:none;background:none;color:inherit;padding:0;}
+
+.btn-delete{color:var(--text-gray);opacity:0.3;cursor:pointer;position:absolute;top:15px;right:15px;transition:0.2s;z-index:5;}
+.btn-delete:hover{color:var(--red);opacity:1;}
+
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:none;justify-content:center;align-items:center;z-index:100;}
+
+.modal{background:black;width:500px;border-radius:16px;padding:20px;border:1px solid var(--border);max-height:90vh;overflow-y:auto;}
+
+.btn-accent{background:var(--accent);color:white;border:none;border-radius:99px;padding:10px 20px;font-weight:bold;cursor:pointer;}
+.btn-accent:disabled{background:var(--disabled);cursor:not-allowed;}
+
+.mobile-nav{display:none;}
+
+@media(max-width:600px){
+nav{display:none;}
+main{width:100%;border:none;}
+.mobile-nav{display:flex;position:fixed;bottom:0;width:100%;background:black;border-top:1px solid var(--border);justify-content:space-around;padding:15px;z-index:20;}
+.app-container{padding-bottom:80px;}
+}
+</style>
 </head>
+
 <body>
 
-<div id="final-screen">
-    <div style="font-size: 80px; font-weight: 900;">Т</div>
-    <h2 style="color: var(--accent);">TWIYERNOST</h2>
-</div>
-
-<div id="authModal" class="modal-overlay" style="display: flex;">
-    <div class="modal" style="text-align: center;">
-        <div style="font-size:40px; margin-bottom:10px; font-weight:900;">Т</div>
-        <h2>Войти в Твиьерость</h2>
-        <div style="margin-top: 25px; display: flex; justify-content: center;">
-            <div id="g_id_onload" data-client_id="254609526549-srv2qeo7otu12op9eh9qfkf0h8lpgck9.apps.googleusercontent.com" data-callback="onGoogleSignIn"></div>
-            <div class="g_id_signin" data-type="standard" data-shape="pill"></div>
-        </div>
-    </div>
-</div>
-
-<div id="editProfileModal" class="modal-overlay">
-    <div class="modal">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="margin:0">Изменить профиль</h3>
-            <button class="btn-accent" onclick="saveProfile()">Сохранить</button>
-        </div>
-        
-        <div style="text-align: center; margin-bottom: 20px;">
-            <div id="edit-avatar-preview" class="avatar-sm" style="width:100px; height:100px; margin:0 auto; border: 2px solid var(--accent);"></div>
-            <label style="display:block; margin-top:10px; color:var(--accent); cursor:pointer;">
-                Изменить фото <input type="file" accept="image/*" style="display:none;" onchange="previewNewAvatar(this)">
-            </label>
-        </div>
-
-        <span class="label-text">Имя</span>
-        <input type="text" id="editName" class="edit-field">
-
-        <span class="label-text">Имя пользователя (Никнейм)</span>
-        <input type="text" id="editHandle" class="edit-field" placeholder="@username">
-
-        <span class="label-text">О себе</span>
-        <textarea id="editBio" class="edit-field" rows="3"></textarea>
-
-        <span class="label-text">Местоположение</span>
-        <input type="text" id="editLocation" class="edit-field">
-
-        <span class="label-text">Веб-сайт</span>
-        <input type="text" id="editWebsite" class="edit-field">
-
-        <button class="btn-accent" style="background:none; border:1px solid var(--red); color:var(--red); width:100%; margin-bottom: 10px;" onclick="deleteAccount()">Удалить аккаунт</button>
-        <button class="btn-accent" style="background:none; border:1px solid var(--border); width:100%;" onclick="document.getElementById('editProfileModal').style.display='none'">Отмена</button>
-    </div>
-</div>
-
 <div class="app-container">
-    <nav>
-        <div class="logo" onclick="showTab('feed')">Т</div>
-        <div class="nav-link active" id="link-feed" onclick="showTab('feed', this)">🏠 <span class="nav-text">Главная</span></div>
-        <div class="nav-link" id="link-profile" onclick="showTab('profile', this)">👤 <span class="nav-text">Профиль</span></div>
-    </nav>
 
-    <main>
-        <div id="feed" class="content-section active">
-            <div class="header">Главная</div>
-            <div class="post-input">
-                <div class="avatar-sm my-pic"></div>
-                <div style="flex:1">
-                    <textarea id="postText" placeholder="Что происходит?" rows="2" oninput="checkPostButton()"></textarea>
-                    <div style="margin: 10px 0;">
-                        <label style="cursor:pointer; color:var(--accent);">🖼️ Фото/Видео <input type="file" id="postFile" accept="image/*,video/*" style="display:none;" onchange="handleFile(this)"></label>
-                        <span id="fileName" style="font-size:12px; color:var(--text-gray); margin-left:10px;"></span>
-                    </div>
-                    <button id="publishBtn" class="btn-accent" style="float:right;" disabled onclick="publishPost()">Пост</button>
-                </div>
-            </div>
-            <div id="feedPosts"></div>
-        </div>
+<nav>
+<div class="logo" onclick="showTab('feed')">Т</div>
+<div class="nav-link active" onclick="showTab('feed',this)">🏠 Главная</div>
+<div class="nav-link" onclick="showTab('profile',this)">👤 Профиль</div>
+</nav>
 
-        <div id="profile" class="content-section">
-            <div class="header">Профиль</div>
-            <div style="padding: 30px; border-bottom: 1px solid var(--border);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div class="avatar-sm my-pic" style="width:100px; height:100px; border: 4px solid var(--black);"></div>
-                    <button class="btn-accent" style="background:none; border: 1px solid var(--border);" onclick="openEditModal()">Изменить профиль</button>
-                </div>
-                <h2 id="prof-name" style="margin-top:15px; margin-bottom:0;">Гость</h2>
-                <p id="prof-handle" style="color:var(--text-gray); margin-top:5px; margin-bottom:10px;">@guest</p>
-                <p id="prof-bio" style="font-size:15px; margin-bottom:10px;"></p>
-                <div style="display:flex; gap:15px; color:var(--text-gray); font-size:14px;">
-                    <span id="prof-location"></span>
-                    <a id="prof-website" href="#" target="_blank" style="color:var(--accent); text-decoration:none;"></a>
-                </div>
-                <button class="btn-accent" style="margin-top:20px; background:#fff; color:#000; width: 100%;" onclick="logout()">Выйти</button>
-            </div>
-            <div id="userPostsList"></div>
-        </div>
-    </main>
+<main>
+
+<div id="feed" class="content-section active">
+
+<div class="header">Главная</div>
+
+<div class="post-input">
+
+<div class="avatar-sm my-pic"></div>
+
+<div style="flex:1">
+
+<textarea id="postText" placeholder="Что происходит?" rows="2" oninput="checkPostButton()"></textarea>
+
+<div style="margin:10px 0;">
+<label style="cursor:pointer;color:var(--accent);">
+🖼️ Фото/Видео
+<input type="file" id="postFile" accept="image/*,video/*" style="display:none;" onchange="handleFile(this)">
+</label>
+
+<span id="fileName" style="font-size:12px;color:var(--text-gray);margin-left:10px;"></span>
 </div>
 
-<div class="mobile-nav">
-    <span onclick="showTab('feed')">🏠</span>
-    <span onclick="showTab('profile')">👤</span>
+<button id="publishBtn" class="btn-accent" style="float:right;" disabled onclick="publishPost()">Пост</button>
+
+</div>
 </div>
 
-<canvas id="canvas" style="display:none;"></canvas>
+<div id="feedPosts"></div>
+
+</div>
+
+<div id="profile" class="content-section">
+
+<div class="header">Профиль</div>
+
+<div style="padding:30px;border-bottom:1px solid var(--border);">
+
+<div class="avatar-sm my-pic" style="width:100px;height:100px;"></div>
+
+<h2 id="prof-name">Гость</h2>
+
+<p id="prof-handle">@guest</p>
+
+</div>
+
+<div id="userPostsList"></div>
+
+</div>
+
+</main>
+</div>
 
 <script>
-    let userData = JSON.parse(localStorage.getItem('tviyerost_user')) || { 
-        loggedIn: false, name: "Гость", handle: "@guest", img: "", bio: "", location: "", website: "", id: "u" + Date.now() 
-    };
-    let tempMedia = null;
-    let tempNewAvatar = null;
 
-    function onGoogleSignIn(response) {
-        const payload = JSON.parse(atob(response.credential.split('.')[1]));
-        userData = { 
-            loggedIn: true, 
-            name: payload.name, 
-            handle: "@" + payload.given_name.toLowerCase(), 
-            img: payload.picture, 
-            bio: "", location: "", website: "", 
-            id: "u" + Date.now() 
-        };
-        localStorage.setItem('tviyerost_user', JSON.stringify(userData));
-        updateUI();
-    }
+let userData=JSON.parse(localStorage.getItem('tviyerost_user'))||{
+loggedIn:true,
+name:"Гость",
+handle:"@guest",
+img:"",
+id:"u"+Date.now()
+};
 
-    function updateUI() {
-        document.getElementById('prof-name').innerText = userData.name;
-        document.getElementById('prof-handle').innerText = userData.handle;
-        document.getElementById('prof-bio').innerText = userData.bio || "";
-        document.getElementById('prof-location').innerText = userData.location ? "📍 " + userData.location : "";
-        const web = document.getElementById('prof-website');
-        web.innerText = userData.website ? "🔗 " + userData.website : "";
-        if (userData.website) web.href = userData.website.startsWith('http') ? userData.website : 'https://' + userData.website;
+let tempMedia=null;
 
-        document.querySelectorAll('.my-pic').forEach(el => el.style.backgroundImage = `url(${userData.img})`);
-        if (userData.loggedIn) document.getElementById('authModal').style.display = 'none';
-        checkPostButton();
-        loadPosts();
-    }
+function handleFile(input){
+const file=input.files[0];
+if(!file)return;
 
-    function openEditModal() {
-        document.getElementById('editName').value = userData.name;
-        document.getElementById('editHandle').value = userData.handle;
-        document.getElementById('editBio').value = userData.bio || "";
-        document.getElementById('editLocation').value = userData.location || "";
-        document.getElementById('editWebsite').value = userData.website || "";
-        document.getElementById('edit-avatar-preview').style.backgroundImage = `url(${userData.img})`;
-        document.getElementById('editProfileModal').style.display = 'flex';
-    }
+document.getElementById('fileName').innerText=file.name;
 
-    function previewNewAvatar(input) {
-        const file = input.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = e => {
-                tempNewAvatar = e.target.result;
-                document.getElementById('edit-avatar-preview').style.backgroundImage = `url(${tempNewAvatar})`;
-            };
-            reader.readAsDataURL(file);
-        }
-    }
+const reader=new FileReader();
 
-    function saveProfile() {
-        userData.name = document.getElementById('editName').value.trim();
-        let nh = document.getElementById('editHandle').value.trim();
-        userData.handle = nh.startsWith('@') ? nh : '@' + nh;
-        userData.bio = document.getElementById('editBio').value.trim();
-        userData.location = document.getElementById('editLocation').value.trim();
-        userData.website = document.getElementById('editWebsite').value.trim();
-        if (tempNewAvatar) userData.img = tempNewAvatar;
+reader.onload=e=>{
+tempMedia={data:e.target.result,type:file.type};
+};
 
-        localStorage.setItem('tviyerost_user', JSON.stringify(userData));
+reader.readAsDataURL(file);
 
-        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
-        posts.forEach(p => {
-            if (p.userId === userData.id) {
-                p.userName = userData.name;
-                p.userHandle = userData.handle;
-                p.userImg = userData.img;
-            }
-        });
-        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
+checkPostButton();
+}
 
-        document.getElementById('editProfileModal').style.display = 'none';
-        updateUI();
-    }
+function checkPostButton(){
 
-    function handleFile(input) {
-        const file = input.files[0];
-        if (file) {
-            document.getElementById('fileName').innerText = file.name;
-            const reader = new FileReader();
-            reader.onload = e => tempMedia = { data: e.target.result, type: file.type };
-            reader.readAsDataURL(file);
-            checkPostButton();
-        }
-    }
+const text=document.getElementById('postText').value.trim();
 
-    function checkPostButton() {
-        const text = document.getElementById('postText')?.value.trim();
-        const btn = document.getElementById('publishBtn');
-        const hasContent = (text && text.length > 0) || !!tempMedia;
-        btn.disabled = !hasContent || !userData.loggedIn;
-    }
+const btn=document.getElementById('publishBtn');
 
-    function publishPost() {
-        const txt = document.getElementById('postText').value.trim();
-        if ((!txt && !tempMedia) || !userData.loggedIn) return;
+btn.disabled=!(text||tempMedia);
 
-        const newPost = { 
-            id: Date.now(), 
-            userId: userData.id,
-            text: txt, 
-            userName: userData.name, 
-            userHandle: userData.handle, 
-            userImg: userData.img, 
-            media: tempMedia, 
-            date: new Date().toLocaleString(),
-            likes: 0,
-            likedBy: [],
-            reposts: 0,
-            isRepostOf: null,
-            comments: []
-        };
+}
 
-        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
-        posts.unshift(newPost);
-        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
-        
-        document.getElementById('postText').value = "";
-        document.getElementById('fileName').innerText = "";
-        tempMedia = null;
-        checkPostButton();
-        renderPosts(posts);
-    }
+function publishPost(){
 
-    function renderPosts(postsToRender) {
-        const feed = document.getElementById('feedPosts');
-        const profile = document.getElementById('userPostsList');
-        if (feed) feed.innerHTML = "";
-        if (profile) profile.innerHTML = "";
+if(!userData.loggedIn)return;
 
-        (postsToRender || []).forEach(p => {
-            let mediaHtml = p.media ? (p.media.type.includes('image') 
-                ? `<img src="${p.media.data}" class="post-media" id="img-${p.id}">` 
-                : `<video src="${p.media.data}" class="post-media" controls></video>`) : "";
+const txt=document.getElementById('postText').value.trim();
 
-            const isLiked = userData.loggedIn && p.likedBy?.includes(userData.id);
-            const likeColor = isLiked ? 'var(--red)' : 'var(--text-gray)';
+if(!txt&&!tempMedia)return;
 
-            let repostNote = p.isRepostOf ? 
-                `<div style="color:var(--text-gray); font-size:13px; margin-bottom:4px;">🔁 ${p.userName} репостнул</div>` : "";
+const newPost={
+id:Date.now(),
+userId:userData.id,
+text:txt,
+userName:userData.name,
+userHandle:userData.handle,
+userImg:userData.img,
+media:tempMedia,
+date:new Date().toLocaleString(),
+likes:0,
+likedBy:[],
+reposts:0,
+comments:[]
+};
 
-            let commentsHtml = '';
-            if (p.comments?.length) {
-                commentsHtml = '<div class="comment-section">';
-                p.comments.forEach((c, idx) => {
-                    const canDelete = userData.loggedIn && c.authorId === userData.id;
-                    commentsHtml += `
-                        <div class="comment">
-                            <div class="comment-content">
-                                <span class="comment-author">${c.authorName}</span>
-                                <span class="comment-date">· ${c.date}</span>
-                                <div class="comment-text">${c.text}</div>
-                            </div>
-                            ${canDelete ? `<span class="delete-comment" onclick="deleteComment(${p.id}, ${idx})">🗑</span>` : ''}
-                        </div>`;
-                });
-                commentsHtml += '</div>';
-            }
+let posts=JSON.parse(localStorage.getItem('tviyerost_posts'))||[];
 
-            const commentInput = userData.loggedIn ? `
-                <div class="comment-input-area">
-                    <textarea class="comment-input" placeholder="Написать комментарий..." rows="1" id="comment-${p.id}"></textarea>
-                    <button class="comment-btn" onclick="addComment(${p.id})">Отправить</button>
-                </div>
-            ` : '';
+posts.unshift(newPost);
 
-            const postHtml = `
-                <div class="post">
-                    <div class="avatar-sm" style="background-image:url(${p.userImg});"></div>
-                    <div style="flex:1">
-                        ${p.userId === userData.id ? `<span class="btn-delete" onclick="deletePost(${p.id})">🗑️</span>` : ''}
-                        ${repostNote}
-                        <b>${p.userName}</b> <span style="color:var(--text-gray)">${p.userHandle} · ${p.date}</span>
-                        <div style="margin:6px 0; font-size:17px;">${p.text}</div>
-                        ${mediaHtml}
-                        <div class="post-actions">
-                            <button class="action-btn" onclick="toggleLike(${p.id}, this)" style="color:${likeColor}">
-                                ❤️ <span>${p.likes || 0}</span>
-                            </button>
-                            <button class="action-btn" onclick="makeRepost(${p.id})">
-                                🔁 <span>${p.reposts || 0}</span>
-                            </button>
-                            <button class="action-btn" onclick="downloadWithWatermark(${p.id}, '${p.userHandle}')">📥</button>
-                        </div>
-                        ${commentsHtml}
-                        ${commentInput}
-                    </div>
-                </div>`;
+localStorage.setItem('tviyerost_posts',JSON.stringify(posts));
 
-            if (feed) feed.innerHTML += postHtml;
-            if (profile && (p.userId === userData.id || p.isRepostOf)) profile.innerHTML += postHtml;
-        });
-    }
+document.getElementById('postText').value="";
+document.getElementById('postFile').value="";
+document.getElementById('fileName').innerText="";
 
-    function toggleLike(id, el) {
-        if (!userData.loggedIn) return;
-        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
-        const post = posts.find(p => p.id === id);
-        if (!post) return;
+tempMedia=null;
 
-        if (!post.likedBy) post.likedBy = [];
+checkPostButton();
 
-        if (post.likedBy.includes(userData.id)) {
-            post.likedBy = post.likedBy.filter(uid => uid !== userData.id);
-            post.likes = Math.max(0, post.likes - 1);
-            el.style.color = 'var(--text-gray)';
-        } else {
-            post.likedBy.push(userData.id);
-            post.likes = (post.likes || 0) + 1;
-            el.style.color = 'var(--red)';
-        }
+renderPosts(posts);
 
-        el.querySelector('span').innerText = post.likes;
-        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
-    }
+}
 
-    function addComment(postId) {
-        if (!userData.loggedIn) return;
-        const ta = document.getElementById(`comment-${postId}`);
-        const text = ta.value.trim();
-        if (!text) return;
+function renderPosts(posts){
 
-        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
-        const post = posts.find(p => p.id === postId);
-        if (!post) return;
+const feed=document.getElementById('feedPosts');
 
-        post.comments = post.comments || [];
-        post.comments.push({
-            authorId: userData.id,
-            authorName: userData.name,
-            text,
-            date: new Date().toLocaleString()
-        });
+const profile=document.getElementById('userPostsList');
 
-        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
-        ta.value = "";
-        renderPosts(posts);
-    }
+feed.innerHTML="";
+profile.innerHTML="";
 
-    function deleteComment(postId, commentIndex) {
-        if (!userData.loggedIn) return;
-        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
-        const post = posts.find(p => p.id === postId);
-        if (!post || !post.comments || !post.comments[commentIndex]) return;
+posts.forEach(p=>{
 
-        if (post.comments[commentIndex].authorId !== userData.id) return;
+const isLiked=p.likedBy?.includes(userData.id);
 
-        post.comments.splice(commentIndex, 1);
-        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
-        renderPosts(posts);
-    }
+const likeColor=isLiked?'var(--red)':'var(--text-gray)';
 
-    function makeRepost(originalId) {
-        if (!userData.loggedIn) return;
-        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
-        const original = posts.find(p => p.id === originalId);
-        if (!original) return;
+const mediaHtml=p.media?
+(p.media.type.includes('image')
+?`<img src="${p.media.data}" class="post-media">`
+:`<video src="${p.media.data}" class="post-media" controls></video>`):"";
 
-        if (posts.some(p => p.userId === userData.id && p.isRepostOf === originalId)) {
-            alert("Вы уже репостнули этот пост");
-            return;
-        }
+const html=`
 
-        const repost = { 
-            ...original,
-            id: Date.now(),
-            userId: userData.id,
-            userName: userData.name,
-            userHandle: userData.handle,
-            userImg: userData.img,
-            date: new Date().toLocaleString(),
-            isRepostOf: originalId,
-            likes: original.likes,
-            likedBy: [...(original.likedBy || [])],
-            reposts: (original.reposts || 0) + 1,
-            comments: []
-        };
+<div class="post">
 
-        original.reposts = (original.reposts || 0) + 1;
-        posts.unshift(repost);
-        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
-        renderPosts(posts);
-    }
+<div class="avatar-sm" style="background-image:url(${p.userImg});"></div>
 
-    function deletePost(id) {
-        if (!confirm("Удалить пост?")) return;
-        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
-        const post = posts.find(p => p.id === id);
-        if (post?.isRepostOf) {
-            const orig = posts.find(p => p.id === post.isRepostOf);
-            if (orig) orig.reposts = Math.max(0, (orig.reposts || 1) - 1);
-        }
-        posts = posts.filter(p => p.id !== id);
-        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
-        renderPosts(posts);
-    }
+<div style="flex:1">
 
-    function deleteAccount() {
-        if (confirm("Удалить аккаунт и все данные?")) {
-            localStorage.clear();
-            location.reload();
-        }
-    }
+<b>${p.userName}</b>
+<span style="color:var(--text-gray)">${p.userHandle} · ${p.date}</span>
 
-    function downloadWithWatermark(postId, handle) {
-        const img = document.getElementById('img-' + postId);
-        if (!img) return alert("Только для фото");
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const image = new Image();
-        image.src = img.src;
-        image.onload = () => {
-            canvas.width = image.width;
-            canvas.height = image.height;
-            ctx.drawImage(image, 0, 0);
-            ctx.font = "bold " + (canvas.width / 20) + "px Arial";
-            ctx.fillStyle = "rgba(255,255,255,0.7)";
-            ctx.fillText("TWIYERNOST | " + handle, 20, canvas.height - 30);
-            const link = document.createElement('a');
-            link.download = 'tviyernost.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        };
-    }
+<div style="margin:6px 0;font-size:17px;">${p.text}</div>
 
-    function loadPosts() {
-        renderPosts(JSON.parse(localStorage.getItem('tviyerost_posts')) || []);
-    }
+${mediaHtml}
 
-    function logout() {
-        document.getElementById('final-screen').style.display = 'flex';
-        setTimeout(() => location.reload(), 1500);
-    }
+<div class="post-actions">
 
-    function showTab(id, el) {
-        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-        if (el) el.classList.add('active');
-        window.scrollTo(0,0);
-    }
+<button class="action-btn" onclick="toggleLike(${p.id},this)" style="color:${likeColor}">
+❤️ <span>${p.likes||0}</span>
+</button>
 
-    window.onload = updateUI;
+</div>
+
+</div>
+</div>
+`;
+
+feed.innerHTML+=html;
+
+if(p.userId===userData.id)profile.innerHTML+=html;
+
+});
+
+}
+
+function toggleLike(id,el){
+
+let posts=JSON.parse(localStorage.getItem('tviyerost_posts'))||[];
+
+const post=posts.find(p=>p.id===id);
+
+if(!post)return;
+
+if(!post.likedBy)post.likedBy=[];
+if(!post.likes)post.likes=0;
+
+const index=post.likedBy.indexOf(userData.id);
+
+if(index!==-1){
+
+post.likedBy.splice(index,1);
+post.likes=Math.max(0,post.likes-1);
+el.style.color='var(--text-gray)';
+
+}else{
+
+post.likedBy.push(userData.id);
+post.likes+=1;
+el.style.color='var(--red)';
+
+}
+
+el.querySelector('span').innerText=post.likes;
+
+localStorage.setItem('tviyerost_posts',JSON.stringify(posts));
+
+}
+
+function loadPosts(){
+
+renderPosts(JSON.parse(localStorage.getItem('tviyerost_posts'))||[]);
+
+}
+
+function showTab(id,el){
+
+document.querySelectorAll('.content-section').forEach(s=>s.classList.remove('active'));
+
+document.getElementById(id).classList.add('active');
+
+}
+
+window.onload=loadPosts;
+
 </script>
+
 </body>
 </html>
