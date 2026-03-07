@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Твиьерость</title>
-    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-firestore-compat.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         :root {
             --black: #000; --white: #eff3f4; --gray: #202327;
             --accent: #1d9bf0; --border: #333639; --text-gray: #71767b;
-            --red: #f91880; --green: #00ba7c;
+            --red: #f91880; --green: #00ba7c; --disabled: #444;
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { margin: 0; background: var(--black); color: var(--white); overflow-x: hidden; }
@@ -46,6 +44,7 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 100; }
         .modal { background: black; width: 500px; border-radius: 16px; padding: 20px; border: 1px solid var(--border); max-height: 90vh; overflow-y: auto; }
         .btn-accent { background: var(--accent); color: white; border: none; border-radius: 99px; padding: 10px 20px; font-weight: bold; cursor: pointer; }
+        .btn-accent:disabled { background: var(--disabled); cursor: not-allowed; }
         
         .edit-field { width: 100%; padding: 12px; margin-bottom: 20px; background: black; border: 1px solid var(--border); color: white; border-radius: 4px; font-size: 16px; }
         .label-text { display: block; text-align: left; color: var(--text-gray); font-size: 13px; margin-bottom: 5px; }
@@ -55,44 +54,68 @@
         .mobile-nav { display: none; }
 
         .comment-section {
-            margin-top: 12px;
-            padding-top: 8px;
-            border-top: 1px solid var(--border);
+            margin: 8px 0 4px;
+            font-size: 14px;
         }
         .comment {
-            margin: 8px 0;
-            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin: 4px 0;
+            padding: 2px 0;
+        }
+        .comment-content {
+            flex: 1;
         }
         .comment-author {
-            font-weight: bold;
-            color: var(--white);
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .comment-date {
+            color: var(--text-gray);
+            font-size: 12px;
         }
         .comment-text {
+            color: var(--white);
+        }
+        .delete-comment {
             color: var(--text-gray);
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0.6;
+            margin-left: 8px;
+        }
+        .delete-comment:hover {
+            color: var(--red);
+            opacity: 1;
         }
         .comment-input-area {
             display: flex;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 8px;
+            margin-top: 8px;
+            align-items: center;
         }
         .comment-input {
             flex: 1;
             background: none;
             border: 1px solid var(--border);
             border-radius: 20px;
-            padding: 8px 16px;
+            padding: 6px 14px;
             color: white;
-            font-size: 15px;
+            font-size: 14px;
             outline: none;
+            resize: none;
+            height: 32px;
         }
         .comment-btn {
             background: var(--accent);
             color: white;
             border: none;
             border-radius: 99px;
-            padding: 8px 16px;
+            padding: 6px 14px;
             font-weight: bold;
             cursor: pointer;
+            font-size: 14px;
         }
 
         @media (max-width: 1000px) { nav { width: 80px; } .nav-text { display: none; } }
@@ -169,12 +192,12 @@
             <div class="post-input">
                 <div class="avatar-sm my-pic"></div>
                 <div style="flex:1">
-                    <textarea id="postText" placeholder="Что происходит?" rows="2"></textarea>
+                    <textarea id="postText" placeholder="Что происходит?" rows="2" oninput="checkPostButton()"></textarea>
                     <div style="margin: 10px 0;">
                         <label style="cursor:pointer; color:var(--accent);">🖼️ Фото/Видео <input type="file" id="postFile" accept="image/*,video/*" style="display:none;" onchange="handleFile(this)"></label>
                         <span id="fileName" style="font-size:12px; color:var(--text-gray); margin-left:10px;"></span>
                     </div>
-                    <button class="btn-accent" style="float:right;" onclick="publishPost()">Пост</button>
+                    <button id="publishBtn" class="btn-accent" style="float:right;" disabled onclick="publishPost()">Пост</button>
                 </div>
             </div>
             <div id="feedPosts"></div>
@@ -210,14 +233,7 @@
 
 <script>
     let userData = JSON.parse(localStorage.getItem('tviyerost_user')) || { 
-        loggedIn: false, 
-        name: "Гость", 
-        handle: "@guest", 
-        img: "", 
-        bio: "", 
-        location: "", 
-        website: "", 
-        id: "u" + Date.now() 
+        loggedIn: false, name: "Гость", handle: "@guest", img: "", bio: "", location: "", website: "", id: "u" + Date.now() 
     };
     let tempMedia = null;
     let tempNewAvatar = null;
@@ -229,9 +245,7 @@
             name: payload.name, 
             handle: "@" + payload.given_name.toLowerCase(), 
             img: payload.picture, 
-            bio: "", 
-            location: "", 
-            website: "", 
+            bio: "", location: "", website: "", 
             id: "u" + Date.now() 
         };
         localStorage.setItem('tviyerost_user', JSON.stringify(userData));
@@ -244,17 +258,12 @@
         document.getElementById('prof-bio').innerText = userData.bio || "";
         document.getElementById('prof-location').innerText = userData.location ? "📍 " + userData.location : "";
         const web = document.getElementById('prof-website');
-        if (userData.website) {
-            web.innerText = "🔗 " + userData.website;
-            web.href = userData.website.startsWith('http') ? userData.website : 'https://' + userData.website;
-        } else {
-            web.innerText = "";
-        }
+        web.innerText = userData.website ? "🔗 " + userData.website : "";
+        if (userData.website) web.href = userData.website.startsWith('http') ? userData.website : 'https://' + userData.website;
 
-        document.querySelectorAll('.my-pic').forEach(el => { 
-            el.style.backgroundImage = `url(${userData.img})`; 
-        });
-        if(userData.loggedIn) document.getElementById('authModal').style.display = 'none';
+        document.querySelectorAll('.my-pic').forEach(el => el.style.backgroundImage = `url(${userData.img})`);
+        if (userData.loggedIn) document.getElementById('authModal').style.display = 'none';
+        checkPostButton();
         loadPosts();
     }
 
@@ -272,7 +281,7 @@
         const file = input.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = e => {
                 tempNewAvatar = e.target.result;
                 document.getElementById('edit-avatar-preview').style.backgroundImage = `url(${tempNewAvatar})`;
             };
@@ -281,16 +290,16 @@
     }
 
     function saveProfile() {
-        userData.name = document.getElementById('editName').value;
+        userData.name = document.getElementById('editName').value.trim();
         let nh = document.getElementById('editHandle').value.trim();
         userData.handle = nh.startsWith('@') ? nh : '@' + nh;
-        userData.bio = document.getElementById('editBio').value;
-        userData.location = document.getElementById('editLocation').value;
-        userData.website = document.getElementById('editWebsite').value;
-        if(tempNewAvatar) userData.img = tempNewAvatar;
-        
+        userData.bio = document.getElementById('editBio').value.trim();
+        userData.location = document.getElementById('editLocation').value.trim();
+        userData.website = document.getElementById('editWebsite').value.trim();
+        if (tempNewAvatar) userData.img = tempNewAvatar;
+
         localStorage.setItem('tviyerost_user', JSON.stringify(userData));
-        
+
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         posts.forEach(p => {
             if (p.userId === userData.id) {
@@ -310,9 +319,17 @@
         if (file) {
             document.getElementById('fileName').innerText = file.name;
             const reader = new FileReader();
-            reader.onload = (e) => tempMedia = { data: e.target.result, type: file.type };
+            reader.onload = e => tempMedia = { data: e.target.result, type: file.type };
             reader.readAsDataURL(file);
+            checkPostButton();
         }
+    }
+
+    function checkPostButton() {
+        const text = document.getElementById('postText')?.value.trim();
+        const btn = document.getElementById('publishBtn');
+        const hasContent = (text && text.length > 0) || !!tempMedia;
+        btn.disabled = !hasContent || !userData.loggedIn;
     }
 
     function publishPost() {
@@ -332,8 +349,9 @@
             likedBy: [],
             reposts: 0,
             isRepostOf: null,
-            comments: []  // ← добавлено поле для комментариев
+            comments: []
         };
+
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         posts.unshift(newPost);
         localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
@@ -341,15 +359,15 @@
         document.getElementById('postText').value = "";
         document.getElementById('fileName').innerText = "";
         tempMedia = null;
+        checkPostButton();
         renderPosts(posts);
     }
 
     function renderPosts(postsToRender) {
-        const feedContainer = document.getElementById('feedPosts');
-        const profileContainer = document.getElementById('userPostsList');
-        
-        if(feedContainer) feedContainer.innerHTML = "";
-        if(profileContainer) profileContainer.innerHTML = "";
+        const feed = document.getElementById('feedPosts');
+        const profile = document.getElementById('userPostsList');
+        if (feed) feed.innerHTML = "";
+        if (profile) profile.innerHTML = "";
 
         (postsToRender || []).forEach(p => {
             let mediaHtml = p.media ? (p.media.type.includes('image') 
@@ -360,27 +378,29 @@
             const likeColor = isLiked ? 'var(--red)' : 'var(--text-gray)';
 
             let repostNote = p.isRepostOf ? 
-                `<div style="color:var(--text-gray); font-size:14px; margin-bottom:4px;">🔁 ${p.userName} репостнул</div>` : "";
+                `<div style="color:var(--text-gray); font-size:13px; margin-bottom:4px;">🔁 ${p.userName} репостнул</div>` : "";
 
-            // Комментарии
             let commentsHtml = '';
-            if (p.comments && p.comments.length > 0) {
+            if (p.comments?.length) {
                 commentsHtml = '<div class="comment-section">';
-                p.comments.forEach(c => {
+                p.comments.forEach((c, idx) => {
+                    const canDelete = userData.loggedIn && c.authorId === userData.id;
                     commentsHtml += `
                         <div class="comment">
-                            <span class="comment-author">${c.authorName}</span>
-                            <span style="color:var(--text-gray); font-size:13px;"> · ${c.date}</span>
-                            <div class="comment-text">${c.text}</div>
+                            <div class="comment-content">
+                                <span class="comment-author">${c.authorName}</span>
+                                <span class="comment-date">· ${c.date}</span>
+                                <div class="comment-text">${c.text}</div>
+                            </div>
+                            ${canDelete ? `<span class="delete-comment" onclick="deleteComment(${p.id}, ${idx})">🗑</span>` : ''}
                         </div>`;
                 });
                 commentsHtml += '</div>';
             }
 
-            // Поле для нового комментария (только если залогинен)
-            let commentInputHtml = userData.loggedIn ? `
-                <div class="comment-input-area" data-post-id="${p.id}">
-                    <textarea class="comment-input" placeholder="Написать комментарий..." rows="1" data-post-id="${p.id}"></textarea>
+            const commentInput = userData.loggedIn ? `
+                <div class="comment-input-area">
+                    <textarea class="comment-input" placeholder="Написать комментарий..." rows="1" id="comment-${p.id}"></textarea>
                     <button class="comment-btn" onclick="addComment(${p.id})">Отправить</button>
                 </div>
             ` : '';
@@ -392,7 +412,7 @@
                         ${p.userId === userData.id ? `<span class="btn-delete" onclick="deletePost(${p.id})">🗑️</span>` : ''}
                         ${repostNote}
                         <b>${p.userName}</b> <span style="color:var(--text-gray)">${p.userHandle} · ${p.date}</span>
-                        <div style="margin-top:8px; font-size:18px;">${p.text}</div>
+                        <div style="margin:6px 0; font-size:17px;">${p.text}</div>
                         ${mediaHtml}
                         <div class="post-actions">
                             <button class="action-btn" onclick="toggleLike(${p.id}, this)" style="color:${likeColor}">
@@ -404,30 +424,26 @@
                             <button class="action-btn" onclick="downloadWithWatermark(${p.id}, '${p.userHandle}')">📥</button>
                         </div>
                         ${commentsHtml}
-                        ${commentInputHtml}
+                        ${commentInput}
                     </div>
                 </div>`;
 
-            if(feedContainer) feedContainer.innerHTML += postHtml;
-            if(profileContainer && (p.userId === userData.id || p.isRepostOf)) {
-                profileContainer.innerHTML += postHtml;
-            }
+            if (feed) feed.innerHTML += postHtml;
+            if (profile && (p.userId === userData.id || p.isRepostOf)) profile.innerHTML += postHtml;
         });
     }
 
     function toggleLike(id, el) {
         if (!userData.loggedIn) return;
-
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         const post = posts.find(p => p.id === id);
         if (!post) return;
 
         if (!post.likedBy) post.likedBy = [];
 
-        const alreadyLiked = post.likedBy.includes(userData.id);
-        if (alreadyLiked) {
+        if (post.likedBy.includes(userData.id)) {
             post.likedBy = post.likedBy.filter(uid => uid !== userData.id);
-            post.likes = Math.max(0, (post.likes || 0) - 1);
+            post.likes = Math.max(0, post.likes - 1);
             el.style.color = 'var(--text-gray)';
         } else {
             post.likedBy.push(userData.id);
@@ -435,49 +451,54 @@
             el.style.color = 'var(--red)';
         }
 
-        const span = el.querySelector('span');
-        span.innerText = post.likes;
-
+        el.querySelector('span').innerText = post.likes;
         localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
     }
 
     function addComment(postId) {
         if (!userData.loggedIn) return;
-
-        const textarea = document.querySelector(`textarea[data-post-id="${postId}"]`);
-        const text = textarea.value.trim();
+        const ta = document.getElementById(`comment-${postId}`);
+        const text = ta.value.trim();
         if (!text) return;
 
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         const post = posts.find(p => p.id === postId);
         if (!post) return;
 
-        if (!post.comments) post.comments = [];
-
+        post.comments = post.comments || [];
         post.comments.push({
             authorId: userData.id,
             authorName: userData.name,
-            text: text,
+            text,
             date: new Date().toLocaleString()
         });
 
         localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
-        textarea.value = "";
+        ta.value = "";
+        renderPosts(posts);
+    }
+
+    function deleteComment(postId, commentIndex) {
+        if (!userData.loggedIn) return;
+        let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
+        const post = posts.find(p => p.id === postId);
+        if (!post || !post.comments || !post.comments[commentIndex]) return;
+
+        if (post.comments[commentIndex].authorId !== userData.id) return;
+
+        post.comments.splice(commentIndex, 1);
+        localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
         renderPosts(posts);
     }
 
     function makeRepost(originalId) {
         if (!userData.loggedIn) return;
-
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         const original = posts.find(p => p.id === originalId);
         if (!original) return;
 
-        const alreadyReposted = posts.some(p => 
-            p.userId === userData.id && p.isRepostOf === originalId
-        );
-        if (alreadyReposted) {
-            alert("Вы уже сделали репост этого поста");
+        if (posts.some(p => p.userId === userData.id && p.isRepostOf === originalId)) {
+            alert("Вы уже репостнули этот пост");
             return;
         }
 
@@ -493,34 +514,30 @@
             likes: original.likes,
             likedBy: [...(original.likedBy || [])],
             reposts: (original.reposts || 0) + 1,
-            comments: []  // новые комментарии не копируются
+            comments: []
         };
 
         original.reposts = (original.reposts || 0) + 1;
-
         posts.unshift(repost);
         localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
         renderPosts(posts);
     }
 
     function deletePost(id) {
-        if(!confirm("Удалить этот пост?")) return;
-
+        if (!confirm("Удалить пост?")) return;
         let posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
         const post = posts.find(p => p.id === id);
-        
-        if (post && post.isRepostOf) {
-            const original = posts.find(p => p.id === post.isRepostOf);
-            if (original) original.reposts = Math.max(0, (original.reposts || 1) - 1);
+        if (post?.isRepostOf) {
+            const orig = posts.find(p => p.id === post.isRepostOf);
+            if (orig) orig.reposts = Math.max(0, (orig.reposts || 1) - 1);
         }
-
         posts = posts.filter(p => p.id !== id);
         localStorage.setItem('tviyerost_posts', JSON.stringify(posts));
         renderPosts(posts);
     }
 
     function deleteAccount() {
-        if(confirm("Вы уверены? Все данные будут удалены.")) {
+        if (confirm("Удалить аккаунт и все данные?")) {
             localStorage.clear();
             location.reload();
         }
@@ -528,16 +545,16 @@
 
     function downloadWithWatermark(postId, handle) {
         const img = document.getElementById('img-' + postId);
-        if(!img) return alert("Только для фото");
+        if (!img) return alert("Только для фото");
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const image = new Image();
         image.src = img.src;
         image.onload = () => {
-            canvas.width = image.width; 
+            canvas.width = image.width;
             canvas.height = image.height;
             ctx.drawImage(image, 0, 0);
-            ctx.font = "bold " + (canvas.width/20) + "px Arial";
+            ctx.font = "bold " + (canvas.width / 20) + "px Arial";
             ctx.fillStyle = "rgba(255,255,255,0.7)";
             ctx.fillText("TWIYERNOST | " + handle, 20, canvas.height - 30);
             const link = document.createElement('a');
@@ -547,21 +564,20 @@
         };
     }
 
-    function loadPosts() { 
-        const posts = JSON.parse(localStorage.getItem('tviyerost_posts')) || [];
-        renderPosts(posts); 
+    function loadPosts() {
+        renderPosts(JSON.parse(localStorage.getItem('tviyerost_posts')) || []);
     }
 
-    function logout() { 
-        document.getElementById('final-screen').style.display = 'flex'; 
-        setTimeout(() => { location.reload(); }, 1500); 
+    function logout() {
+        document.getElementById('final-screen').style.display = 'flex';
+        setTimeout(() => location.reload(), 1500);
     }
-    
+
     function showTab(id, el) {
         document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-        if(el) el.classList.add('active');
+        if (el) el.classList.add('active');
         window.scrollTo(0,0);
     }
 
