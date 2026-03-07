@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Твиьерость</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        :root {
+            --black: #000000;
+            --white: #eff3f4;
+            --gray: #202327;
+            --accent: #1d9bf0;
+            --border: #333639;
+            --text-gray: #71767b;
+        }
+
+        * { box-sizing: border-box; transition: all 0.2s ease; }
+        body { margin: 0; background: var(--black); color: var(--white); font-family: sans-serif; overflow-x: hidden; }
+
+        /* Layout */
+        .app-container { display: flex; justify-content: center; max-width: 1250px; margin: 0 auto; }
+        
+        /* Sidebar */
+        nav { width: 275px; padding: 10px; height: 100vh; position: sticky; top: 0; border-right: 1px solid var(--border); }
+        .nav-item { display: flex; align-items: center; gap: 15px; padding: 12px; font-size: 20px; border-radius: 99px; cursor: pointer; margin-bottom: 5px; }
+        .nav-item:hover { background: #181818; }
+        .nav-item.active { font-weight: bold; }
+        .logo { font-size: 32px; font-weight: 900; padding-left: 12px; margin-bottom: 15px; color: var(--accent); }
+
+        /* Main Feed */
+        main { width: 600px; min-height: 100vh; }
+        .page-header { padding: 15px; font-size: 20px; font-weight: bold; border-bottom: 1px solid var(--border); sticky; top: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); z-index: 5; }
+        
+        /* Sections */
+        .section { display: none; }
+        .section.active { display: block; }
+
+        /* Profile Style */
+        .profile-banner { height: 200px; background: #333; position: relative; }
+        .profile-avatar-big { width: 120px; height: 120px; border-radius: 50%; border: 4px solid black; background: #555; position: absolute; bottom: -60px; left: 20px; }
+        .profile-info { margin-top: 70px; padding: 20px; }
+
+        /* Post Box */
+        .tweet-box { padding: 15px; border-bottom: 1px solid var(--border); display: flex; gap: 15px; }
+        .avatar-sm { width: 48px; height: 48px; border-radius: 50%; background: var(--gray); flex-shrink: 0; }
+        textarea { width: 100%; background: none; border: none; color: white; font-size: 20px; outline: none; resize: none; }
+        .btn-main { background: var(--accent); color: white; border: none; padding: 10px 24px; border-radius: 99px; font-weight: bold; cursor: pointer; float: right; }
+
+        /* Modal / Login */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(91, 112, 131, 0.4); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal { background: black; padding: 40px; border-radius: 16px; width: 400px; text-align: center; border: 1px solid var(--border); }
+
+        /* Mobile */
+        @media (max-width: 1000px) { nav { width: 80px; } .nav-text { display: none; } }
+        @media (max-width: 600px) {
+            nav { display: none; }
+            main { width: 100%; }
+            .mobile-bar { display: flex; position: fixed; bottom: 0; width: 100%; background: black; border-top: 1px solid var(--border); justify-content: space-around; padding: 15px; }
+        }
+        .mobile-bar { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="loginModal" class="modal-overlay" style="display: flex;">
+    <div class="modal">
+        <div style="font-size: 40px; margin-bottom: 20px;">Т</div>
+        <h2>Войти в Твиьерость</h2>
+        <p style="color: var(--text-gray)">Используйте Google для быстрого входа</p>
+        <div style="display: flex; justify-content: center; margin-top: 25px;">
+            <div id="g_id_onload" data-client_id="254609526549-srv2qeo7otu12op9eh9qfkf0h8lpgck9.apps.googleusercontent.com" data-callback="onSignIn"></div>
+            <div class="g_id_signin" data-type="standard"></div>
+        </div>
+        <button onclick="closeLogin()" style="margin-top: 20px; background: none; border: none; color: var(--accent); cursor: pointer;">Позже</button>
+    </div>
+</div>
+
+<div class="app-container">
+    <nav>
+        <div class="logo">Т</div>
+        <div class="nav-item active" onclick="showSection('feed')">🏠 <span class="nav-text">Главная</span></div>
+        <div class="nav-item" onclick="showSection('explore')">🔍 <span class="nav-text">Поиск</span></div>
+        <div class="nav-item" onclick="showSection('profile')">👤 <span class="nav-text">Профиль</span></div>
+        <button class="btn-main" style="width: 90%; margin-top: 20px;" onclick="document.querySelector('textarea').focus()">Твиьеростнуть</button>
+    </nav>
+
+    <main>
+        <div id="feed" class="section active">
+            <div class="page-header">Главная</div>
+            <div class="tweet-box">
+                <div class="avatar-sm"></div>
+                <div style="flex:1">
+                    <textarea placeholder="Что происходит?"></textarea>
+                    <button class="btn-main" onclick="alert('Сначала войдите через Google!')">Пост</button>
+                </div>
+            </div>
+            <div style="padding: 20px; text-align: center; color: var(--text-gray);">Тут будут посты ваших друзей...</div>
+        </div>
+
+        <div id="profile" class="section">
+            <div class="page-header">Профиль</div>
+            <div class="profile-banner">
+                <div class="profile-avatar-big"></div>
+            </div>
+            <div class="profile-info">
+                <h2 id="userName">Гость</h2>
+                <p style="color: var(--text-gray)">@guest_user</p>
+                <p>Вы еще не вошли в аккаунт Твиьерости.</p>
+                <button class="btn-main" style="float: none;" onclick="openLogin()">Войти через Gmail</button>
+            </div>
+        </div>
+        
+        <div id="explore" class="section">
+            <div class="page-header">Актуальное</div>
+            <div style="padding: 20px;">
+                <input type="text" placeholder="Поиск в Твиьерости" style="width:100%; padding:15px; border-radius:99px; background:var(--gray); border:none; color:white;">
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="mobile-bar">
+    <span onclick="showSection('feed')">🏠</span>
+    <span onclick="showSection('explore')">🔍</span>
+    <span onclick="showSection('profile')">👤</span>
+</div>
+
+<script>
+    // Переключение разделов
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        // Простая логика подсветки активной кнопки
+    }
+
+    // Управление модалкой
+    function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
+    function closeLogin() { document.getElementById('loginModal').style.display = 'none'; }
+
+    // Эмуляция входа после выбора Google (в реальности сработает после проверки токена)
+    function onSignIn(response) {
+        console.log("JWT токен получен:", response.credential);
+        closeLogin();
+        document.getElementById('userName').innerText = "Пользователь Google";
+        alert("Вы успешно вошли!");
+    }
+</script>
+
+</body>
+</html>
