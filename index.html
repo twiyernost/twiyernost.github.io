@@ -4,8 +4,52 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ть (Твиьерность)</title>
+  
+  <!-- Google Identity Services (для красивой кнопки "Войти через Google") -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jwt-decode/3.1.2/jwt-decode.min.js"></script>
+  
+  <!-- Firebase SDK v9+ (modular) через CDN -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, updateDoc, doc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    // ====================== ТВОЯ FIREBASE КОНФИГУРАЦИЯ ======================
+    // ЗАМЕНИ ЭТИ ДАННЫЕ НА СВОИ ИЗ FIREBASE CONSOLE → Project Settings → SDK setup
+    const firebaseConfig = {
+      apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXX",           // ← замени
+      authDomain: "твой-проект.firebaseapp.com",            // ← замени
+      projectId: "твой-проект",                             // ← замени
+      storageBucket: "твой-проект.appspot.com",             // ← замени
+      messagingSenderId: "1234567890",                       // ← замени
+      appId: "1:1234567890:web:xxxxxxxxxxxxxxxxxxxxxxxx"     // ← замени
+    };
+
+    // Инициализация Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // Глобальные переменные (доступны в остальном скрипте)
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+    window.firebaseSignInWithPopup = signInWithPopup;
+    window.firebaseGoogleProvider = provider;
+    window.firebaseOnAuthStateChanged = onAuthStateChanged;
+    window.firebaseSignOut = signOut;
+    window.firebaseAddDoc = addDoc;
+    window.firebaseGetDocs = getDocs;
+    window.firebaseOnSnapshot = onSnapshot;
+    window.firebaseQuery = query;
+    window.firebaseCollection = collection;
+    window.firebaseOrderBy = orderBy;
+    window.firebaseServerTimestamp = serverTimestamp;
+    window.firebaseUpdateDoc = updateDoc;
+    window.firebaseDoc = doc;
+    window.firebaseArrayUnion = arrayUnion;
+  </script>
+
   <style>
     :root {
       --bg: #000;
@@ -16,25 +60,14 @@
     * { box-sizing: border-box; margin:0; padding:0; }
     body { font-family: system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); overflow:hidden; }
     
-    /* МОБИЛЬНАЯ ВЕРСИЯ */
+    /* Мобильная адаптация */
     @media (max-width: 768px) {
       .container { flex-direction: column; }
-      .sidebar { 
-        position: fixed; 
-        left: -280px; 
-        top: 0; 
-        width: 280px; 
-        height: 100vh; 
-        background: #000; 
-        z-index: 200; 
-        transition: left 0.4s ease; 
-        border-right: none;
-      }
+      .sidebar { position: fixed; left: -280px; top: 0; width: 280px; height: 100vh; background: #000; z-index: 200; transition: left 0.4s ease; }
       .sidebar.active { left: 0; }
       .main { height: calc(100vh - 60px); border-right: none; }
       .rightbar { display: none; }
       .header { padding: 12px; font-size: 18px; }
-      .post-box, .post { padding: 12px; }
       textarea { font-size: 16px; height: 70px; }
     }
 
@@ -50,19 +83,7 @@
     .main { flex:1; overflow-y:auto; }
     .rightbar { width:320px; padding:20px; border-left:1px solid var(--border); overflow-y:auto; }
 
-    .header { 
-      padding:15px 20px; 
-      border-bottom:1px solid var(--border); 
-      font-size:22px; 
-      font-weight:700; 
-      display:flex; 
-      align-items:center; 
-      gap:15px; 
-      position:sticky; 
-      top:0; 
-      background:#000; 
-      z-index:10;
-    }
+    .header { padding:15px 20px; border-bottom:1px solid var(--border); font-size:22px; font-weight:700; display:flex; align-items:center; gap:15px; position:sticky; top:0; background:#000; z-index:10; }
     .hamburger { font-size:32px; cursor:pointer; display:none; }
     @media (max-width: 768px) { .hamburger { display:block; } }
 
@@ -84,22 +105,11 @@
     .action:hover { transform:scale(1.2); }
 
     /* Модальные окна */
-    .modal { 
-      position:fixed; inset:0; background:rgba(0,0,0,0.9); display:none; align-items:center; justify-content:center; z-index:300;
-    }
-    .modal-content { 
-      background:#16181c; width:90%; max-width:420px; border-radius:20px; padding:25px; text-align:center;
-    }
-    .captcha-grid { 
-      display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0;
-    }
-    .captcha-img { 
-      width:100%; height:110px; object-fit:cover; border-radius:12px; cursor:pointer; border:3px solid transparent; transition:0.2s;
-    }
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,0.9); display:none; align-items:center; justify-content:center; z-index:300; }
+    .modal-content { background:#16181c; width:90%; max-width:420px; border-radius:20px; padding:25px; text-align:center; }
+    .captcha-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0; }
+    .captcha-img { width:100%; height:110px; object-fit:cover; border-radius:12px; cursor:pointer; border:3px solid transparent; transition:0.2s; }
     .captcha-img.selected { border:3px solid #1d9bf0; }
-    .profile-form input, .profile-form button { width:100%; padding:12px; margin:8px 0; border-radius:12px; border:none; }
-    .profile-form input[type="text"] { background:#222; color:white; }
-    .profile-form input[type="file"] { background:#222; }
   </style>
 </head>
 <body>
@@ -112,13 +122,12 @@
       <h2 style="margin:20px 0 8px;">Добро пожаловать</h2>
       <p style="color:#888; margin-bottom:25px;">Присоединяйся к разговору</p>
       
-      <div id="g_id_onload"
-           data-client_id="254609526549-srv2qeo7otu12op9eh9qfkf0h8lpgck9.apps.googleusercontent.com"
-           data-callback="handleCredentialResponse"
-           data-auto_prompt="false"></div>
-      <div class="g_id_signin" data-type="standard" data-size="large" data-theme="filled_blue" data-text="continue_with"></div>
+      <!-- Кнопка Google (Firebase + Google Identity) -->
+      <button onclick="googleSignIn()" style="background:#4285F4; width:100%; padding:14px; font-size:16px; margin-bottom:15px;">
+        Войти через Google
+      </button>
       
-      <button onclick="guestLogin()" style="background:#333; width:100%; margin-top:15px;">Войти как гость 👀</button>
+      <button onclick="guestLogin()" style="background:#333; width:100%;">Войти как гость 👀</button>
       <p style="margin-top:20px; font-size:13px; color:#666;">Гости могут только читать</p>
     </div>
   </div>
@@ -126,7 +135,7 @@
   <!-- ПРИЛОЖЕНИЕ -->
   <div id="app" style="display:none;">
     <div class="container">
-      <!-- САЙДБАР (мобильный с анимацией) -->
+      <!-- САЙДБАР -->
       <div id="sidebar" class="sidebar">
         <div onclick="toggleLogo()" style="font-size:48px; font-weight:900; cursor:pointer; margin:20px 0 30px;">ТЬ</div>
         <div class="nav-item" onclick="showFeed()">🏠 Главная</div>
@@ -134,14 +143,13 @@
         <div class="nav-item" onclick="logout()">🚪 Выйти</div>
       </div>
 
-      <!-- ОСНОВНАЯ ЛЕНТА -->
+      <!-- ЛЕНТА -->
       <div class="main">
         <div class="header">
           <span class="hamburger" onclick="toggleMobileMenu()">≡</span>
           <span style="flex:1;">Главная</span>
         </div>
 
-        <!-- Создать пост (только не гость) -->
         <div id="postCreator" class="post-box">
           <div style="display:flex; gap:12px;">
             <img id="myAvatar" src="https://via.placeholder.com/48" class="avatar" style="width:42px;height:42px;">
@@ -150,7 +158,6 @@
           <button onclick="verifyHumanAndPost()" style="margin-top:15px; width:100%;">Опубликовать в Ть</button>
         </div>
 
-        <!-- Лента -->
         <div id="posts" class="posts"></div>
       </div>
 
@@ -162,56 +169,91 @@
     </div>
   </div>
 
-  <!-- МОДАЛКА РЕДАКТИРОВАНИЯ ПРОФИЛЯ -->
+  <!-- МОДАЛКА ПРОФИЛЯ -->
   <div id="profileModal" class="modal">
     <div class="modal-content">
       <h3>Редактировать профиль</h3>
-      <div class="profile-form">
-        <input type="text" id="editName" placeholder="Имя">
-        <input type="text" id="editUsername" placeholder="Никнейм (@)">
-        <label style="color:#888; display:block; margin:10px 0 5px;">Аватарка</label>
-        <input type="file" id="editAvatar" accept="image/*">
-        <button onclick="saveProfile()">Сохранить изменения</button>
-        <button onclick="closeProfileModal()" style="background:#333;">Отмена</button>
-      </div>
+      <input type="text" id="editName" placeholder="Имя" style="width:100%; padding:12px; margin:10px 0; background:#222; color:white; border:none; border-radius:12px;">
+      <input type="text" id="editUsername" placeholder="Никнейм (@)" style="width:100%; padding:12px; margin:10px 0; background:#222; color:white; border:none; border-radius:12px;">
+      <label style="color:#888; display:block; margin:10px 0 5px;">Аватарка</label>
+      <input type="file" id="editAvatar" accept="image/*" style="width:100%; padding:8px; background:#222; color:white; border-radius:12px;">
+      <button onclick="saveProfile()" style="margin-top:15px; width:100%;">Сохранить</button>
+      <button onclick="closeProfileModal()" style="background:#333; width:100%; margin-top:8px;">Отмена</button>
     </div>
   </div>
 
-  <!-- МОДАЛКА КАПЧИ С КАРТИНКАМИ -->
+  <!-- МОДАЛКА КАПЧИ (просто "я не робот" с картинками) -->
   <div id="captchaModal" class="modal">
     <div class="modal-content">
       <h3>Докажи, что ты не робот 🛡️</h3>
       <p id="captchaInstruction" style="margin:15px 0; font-size:18px;">Нажми на <strong>все изображения с автомобилями</strong></p>
       <div id="captchaGrid" class="captcha-grid"></div>
-      <button onclick="checkCaptcha()" style="margin-top:15px;">Подтвердить</button>
-      <button onclick="closeCaptcha()" style="background:#333; margin-left:10px;">Отмена</button>
+      <button onclick="checkCaptcha()" style="margin-top:15px; width:100%;">Подтвердить</button>
+      <button onclick="closeCaptcha()" style="background:#333; width:100%; margin-top:8px;">Отмена</button>
     </div>
   </div>
 
 <script>
-// ==================== ГЛОБАЛЬНЫЕ ====================
+// ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
 let currentUser = null;
 let posts = [];
 let captchaSelected = [];
-let captchaCorrect = [];
+let captchaCorrectIndexes = [];
+
+// Firebase будет доступен после загрузки модуля
+let auth, db, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, addDoc, getDocs, onSnapshot, query, collection, orderBy, serverTimestamp, updateDoc, doc, arrayUnion;
+
+// Ждём загрузки Firebase
+window.addEventListener('load', () => {
+  // Firebase уже инициализирован в модуле выше
+  auth = window.firebaseAuth;
+  db = window.firebaseDb;
+  signInWithPopup = window.firebaseSignInWithPopup;
+  GoogleAuthProvider = window.firebaseGoogleProvider;
+  onAuthStateChanged = window.firebaseOnAuthStateChanged;
+  signOut = window.firebaseSignOut;
+  addDoc = window.firebaseAddDoc;
+  getDocs = window.firebaseGetDocs;
+  onSnapshot = window.firebaseOnSnapshot;
+  query = window.firebaseQuery;
+  collection = window.firebaseCollection;
+  orderBy = window.firebaseOrderBy;
+  serverTimestamp = window.firebaseServerTimestamp;
+  updateDoc = window.firebaseUpdateDoc;
+  doc = window.firebaseDoc;
+  arrayUnion = window.firebaseArrayUnion;
+
+  // Слушаем состояние авторизации Firebase
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      currentUser = {
+        type: 'google',
+        uid: user.uid,
+        name: user.displayName || 'Пользователь',
+        username: '@' + (user.email ? user.email.split('@')[0] : 'user'),
+        avatar: user.photoURL || 'https://via.placeholder.com/48',
+        verified: true
+      };
+      loadUserProfile(); // применяем локальные правки имени/авы
+      startApp();
+    }
+  });
+});
 
 // ==================== ЛОГО ====================
 function toggleLogo() {
   document.getElementById('expandText').classList.toggle('active');
 }
 
-// ==================== GOOGLE ====================
-function handleCredentialResponse(response) {
-  const data = jwt_decode(response.credential);
-  currentUser = {
-    type: 'google',
-    name: data.name,
-    username: '@' + data.email.split('@')[0],
-    avatar: data.picture || 'https://via.placeholder.com/48',
-    verified: false
-  };
-  loadUserProfile(); // подгружаем сохранённые правки
-  showCaptcha(() => startApp());
+// ==================== ВХОД ЧЕРЕЗ GOOGLE (исправленный через Firebase) ====================
+async function googleSignIn() {
+  try {
+    const result = await signInWithPopup(auth, new GoogleAuthProvider());
+    // Пользователь уже обработается в onAuthStateChanged
+  } catch (error) {
+    console.error("Ошибка входа через Google:", error);
+    alert("Не удалось войти через Google. Проверь конфигурацию Firebase.");
+  }
 }
 
 // ==================== ГОСТЬ ====================
@@ -223,11 +265,10 @@ function guestLogin() {
     avatar: 'https://via.placeholder.com/48',
     verified: false
   };
-  loadUserProfile();
   showCaptcha(() => startApp());
 }
 
-// ==================== ЗАПУСК ====================
+// ==================== ЗАПУСК ПРИЛОЖЕНИЯ ====================
 function startApp() {
   document.getElementById('auth').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
@@ -238,23 +279,23 @@ function startApp() {
     document.getElementById('postCreator').style.display = 'block';
   }
   
-  loadPosts();
+  loadPostsFromFirebase();
   updateProfileInfo();
 }
 
 // ==================== ПРОФИЛЬ ====================
 function loadUserProfile() {
-  const saved = localStorage.getItem('twiiernost_user');
+  const saved = localStorage.getItem('twiiernost_user_' + (currentUser.uid || 'guest'));
   if (saved) {
-    const savedUser = JSON.parse(saved);
-    currentUser.name = savedUser.name || currentUser.name;
-    currentUser.username = savedUser.username || currentUser.username;
-    currentUser.avatar = savedUser.avatar || currentUser.avatar;
+    const s = JSON.parse(saved);
+    if (s.name) currentUser.name = s.name;
+    if (s.username) currentUser.username = s.username;
+    if (s.avatar) currentUser.avatar = s.avatar;
   }
 }
 
 function saveUserProfile() {
-  localStorage.setItem('twiiernost_user', JSON.stringify({
+  localStorage.setItem('twiiernost_user_' + (currentUser.uid || 'guest'), JSON.stringify({
     name: currentUser.name,
     username: currentUser.username,
     avatar: currentUser.avatar
@@ -268,6 +309,7 @@ function updateProfileInfo() {
     <span style="color:#1d9bf0;">${currentUser.username}</span><br>
     <small>${currentUser.type === 'guest' ? 'Только просмотр' : 'Google'}</small>
   `;
+  document.getElementById('myAvatar').src = currentUser.avatar;
 }
 
 function showProfileModal() {
@@ -287,18 +329,16 @@ function saveProfile() {
   if (newName) currentUser.name = newName;
   if (newUsername.length > 1) currentUser.username = newUsername;
   
-  // Аватарка
-  const fileInput = document.getElementById('editAvatar');
-  if (fileInput.files[0]) {
+  const file = document.getElementById('editAvatar').files[0];
+  if (file) {
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = (e) => {
       currentUser.avatar = e.target.result;
-      document.getElementById('myAvatar').src = currentUser.avatar;
       saveUserProfile();
       updateProfileInfo();
       closeProfileModal();
     };
-    reader.readAsDataURL(fileInput.files[0]);
+    reader.readAsDataURL(file);
   } else {
     saveUserProfile();
     updateProfileInfo();
@@ -308,8 +348,11 @@ function saveProfile() {
 
 // ==================== МОБИЛЬНОЕ МЕНЮ ====================
 function toggleMobileMenu() {
-  const sidebar = document.getElementById('sidebar');
-  sidebar.classList.toggle('active');
+  document.getElementById('sidebar').classList.toggle('active');
+}
+
+function showFeed() {
+  document.getElementById('sidebar').classList.remove('active');
 }
 
 // ==================== КАПЧА С КАРТИНКАМИ ====================
@@ -320,53 +363,42 @@ function showCaptcha(callback) {
   const grid = document.getElementById('captchaGrid');
   grid.innerHTML = '';
   
-  // 6 картинок (3 машины = correct)
-  const allImages = [
-    {src: "https://picsum.photos/id/1015/150", correct: true},   // машина
-    {src: "https://picsum.photos/id/160/150", correct: true},    // машина
-    {src: "https://picsum.photos/id/29/150", correct: true},     // машина
-    {src: "https://picsum.photos/id/201/150", correct: false},   // мост
-    {src: "https://picsum.photos/id/251/150", correct: false},   // природа
-    {src: "https://picsum.photos/id/30/150", correct: false}     // люди
+  const images = [
+    {src: "https://picsum.photos/id/1015/150", isCar: true},
+    {src: "https://picsum.photos/id/160/150", isCar: true},
+    {src: "https://picsum.photos/id/29/150", isCar: true},
+    {src: "https://picsum.photos/id/201/150", isCar: false},
+    {src: "https://picsum.photos/id/251/150", isCar: false},
+    {src: "https://picsum.photos/id/30/150", isCar: false}
   ];
   
-  // перемешиваем
-  captchaCorrect = allImages.filter(i => i.correct);
-  const shuffled = allImages.sort(() => Math.random() - 0.5);
+  const shuffled = images.sort(() => Math.random() - 0.5);
+  captchaCorrectIndexes = shuffled.map((img, i) => img.isCar ? i : -1).filter(i => i !== -1);
   
-  shuffled.forEach((img, index) => {
+  shuffled.forEach((img, i) => {
     const el = document.createElement('img');
     el.src = img.src;
     el.className = 'captcha-img';
-    el.dataset.index = index;
     el.onclick = () => {
       el.classList.toggle('selected');
-      const idx = captchaSelected.indexOf(index);
-      if (idx > -1) captchaSelected.splice(idx,1);
-      else captchaSelected.push(index);
+      const idx = captchaSelected.indexOf(i);
+      idx > -1 ? captchaSelected.splice(idx, 1) : captchaSelected.push(i);
     };
     grid.appendChild(el);
   });
   
   document.getElementById('captchaModal').style.display = 'flex';
-  window.captchaCallback = callback; // сохраняем колбэк
+  window.currentCaptchaCallback = callback;
 }
 
 function checkCaptcha() {
-  const selectedImages = captchaSelected.map(i => document.querySelectorAll('.captcha-img')[i]);
-  
-  // проверяем: все correct выбраны и нет лишних
-  const correctIndexes = Array.from(document.querySelectorAll('.captcha-img'))
-    .map((el,i) => el.src.includes('1015') || el.src.includes('160') || el.src.includes('29') ? i : -1)
-    .filter(i => i !== -1);
-  
-  const isCorrect = captchaSelected.every(idx => correctIndexes.includes(idx)) &&
-                    captchaSelected.length === 3;
+  const isCorrect = captchaSelected.length === 3 && 
+                    captchaSelected.every(idx => captchaCorrectIndexes.includes(idx));
   
   if (isCorrect) {
     currentUser.verified = true;
     document.getElementById('captchaModal').style.display = 'none';
-    window.captchaCallback();
+    window.currentCaptchaCallback();
   } else {
     alert('❌ Неправильно! Попробуй ещё раз.');
     captchaSelected = [];
@@ -378,33 +410,58 @@ function closeCaptcha() {
   document.getElementById('captchaModal').style.display = 'none';
 }
 
-// ==================== ПОСТЫ ====================
-function verifyHumanAndPost() {
-  if (currentUser.type === 'guest') return;
+// ==================== ПОСТЫ С FIREBASE ====================
+async function verifyHumanAndPost() {
+  if (currentUser.type === 'guest') return alert('Гости не могут публиковать');
   showCaptcha(() => createPost());
 }
 
-function createPost() {
+async function createPost() {
   const text = document.getElementById('postText').value.trim();
-  if (!text || text.length < 3) return alert('Пост слишком короткий или пустой');
+  if (!text || text.length < 3) return alert('Пост слишком короткий');
 
-  posts.unshift({
-    id: Date.now(),
-    user: currentUser.name,
-    username: currentUser.username,
-    avatar: currentUser.avatar,
-    text: text,
-    date: new Date().toLocaleString('ru-RU'),
-    likes: 0,
-    comments: []
-  });
-
-  savePosts();
-  document.getElementById('postText').value = '';
-  loadPosts();
+  try {
+    await addDoc(collection(db, "posts"), {
+      user: currentUser.name,
+      username: currentUser.username,
+      avatar: currentUser.avatar,
+      text: text,
+      uid: currentUser.uid || 'guest',
+      timestamp: serverTimestamp(),
+      likes: 0,
+      comments: []
+    });
+    document.getElementById('postText').value = '';
+    loadPostsFromFirebase();
+  } catch (e) {
+    console.error("Ошибка публикации:", e);
+    alert("Не удалось опубликовать пост. Проверь подключение к Firebase.");
+  }
 }
 
-function loadPosts() {
+function loadPostsFromFirebase() {
+  const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+  
+  onSnapshot(q, (snapshot) => {
+    posts = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      posts.push({
+        id: doc.id,
+        user: data.user,
+        username: data.username,
+        avatar: data.avatar,
+        text: data.text,
+        date: data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString('ru-RU') : 'только что',
+        likes: data.likes || 0,
+        comments: data.comments || []
+      });
+    });
+    renderPosts();
+  });
+}
+
+function renderPosts() {
   const container = document.getElementById('posts');
   container.innerHTML = '';
   
@@ -419,8 +476,8 @@ function loadPosts() {
           <small>${post.date}</small>
           <p style="margin:10px 0;">${post.text}</p>
           <div class="actions">
-            <span class="action" onclick="likePost(${post.id})">❤️ ${post.likes}</span>
-            <span class="action" onclick="addComment(${post.id})">💬 ${post.comments.length}</span>
+            <span class="action" onclick="likePost('${post.id}')">❤️ ${post.likes}</span>
+            <span class="action" onclick="addComment('${post.id}')">💬 ${post.comments.length}</span>
           </div>
           <div id="comments-${post.id}" style="margin-top:10px; font-size:14px;"></div>
         </div>
@@ -431,33 +488,30 @@ function loadPosts() {
   });
 }
 
-function likePost(id) {
-  const post = posts.find(p => p.id === id);
-  if (post) {
-    post.likes++;
-    savePosts();
-    loadPosts();
-  }
+async function likePost(postId) {
+  try {
+    const postRef = doc(db, "posts", postId);
+    await updateDoc(postRef, { likes: arrayUnion(1) }); // простой способ увеличить
+    // В реальности лучше использовать transaction, но для простоты
+  } catch (e) { console.error(e); }
 }
 
-function addComment(id) {
+function addComment(postId) {
   if (currentUser.type === 'guest') return alert('Гости не могут комментировать');
-  const text = prompt('Напиши комментарий:');
+  const text = prompt('Твой комментарий:');
   if (!text) return;
   
-  const post = posts.find(p => p.id === id);
-  if (post) {
-    post.comments.push({user: currentUser.name, text});
-    savePosts();
-    loadPosts();
-  }
+  const postRef = doc(db, "posts", postId);
+  updateDoc(postRef, {
+    comments: arrayUnion({ user: currentUser.name, text })
+  });
 }
 
-function renderComments(id) {
-  const post = posts.find(p => p.id === id);
-  const container = document.getElementById(`comments-${id}`);
-  if (!container || !post) return;
-  
+function renderComments(postId) {
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+  const container = document.getElementById(`comments-${postId}`);
+  if (!container) return;
   container.innerHTML = post.comments.map(c => `
     <div style="margin:6px 0; padding:6px 10px; background:#111; border-radius:8px;">
       <strong>${c.user}:</strong> ${c.text}
@@ -465,41 +519,17 @@ function renderComments(id) {
   `).join('');
 }
 
-// ==================== ХРАНЕНИЕ ====================
-function savePosts() {
-  localStorage.setItem('twiiernost_posts', JSON.stringify(posts));
-}
-
-function loadSavedPosts() {
-  const saved = localStorage.getItem('twiiernost_posts');
-  if (saved) posts = JSON.parse(saved);
-}
-
 // ==================== ВЫХОД ====================
-function logout() {
-  if (confirm('Выйти из Твиьерности?')) {
-    localStorage.removeItem('twiiernost_user');
-    location.reload();
+async function logout() {
+  if (currentUser.type === 'google') {
+    try {
+      await signOut(auth);
+    } catch (e) {}
   }
-}
-
-function showFeed() {
-  document.getElementById('sidebar').classList.remove('active');
+  location.reload();
 }
 
 // ==================== ИНИЦИАЛИЗАЦИЯ ====================
-window.onload = function() {
-  loadSavedPosts();
-  
-  // Автозагрузка сохранённого профиля при перезагрузке (если был авторизован)
-  const savedUser = localStorage.getItem('twiiernost_user');
-  if (savedUser) {
-    // в реальной версии можно было бы сохранить и user type, но для простоты пока через auth
-  }
-  
-  // Для теста можно раскомментировать гостевой вход:
-  // setTimeout(guestLogin, 300);
-};
 </script>
 </body>
 </html>
