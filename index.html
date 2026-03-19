@@ -5,183 +5,394 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ть (Твиьерность)</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jwt-decode/3.1.2/jwt-decode.min.js"></script>
   <style>
     :root {
       --bg: #000;
       --text: #fff;
       --accent: #1d9bf0;
+      --border: #333;
     }
-    body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--text); }
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); overflow:hidden; }
+    
+    /* МОБИЛЬНАЯ ВЕРСИЯ */
+    @media (max-width: 768px) {
+      .container { flex-direction: column; }
+      .sidebar { 
+        position: fixed; 
+        left: -280px; 
+        top: 0; 
+        width: 280px; 
+        height: 100vh; 
+        background: #000; 
+        z-index: 200; 
+        transition: left 0.4s ease; 
+        border-right: none;
+      }
+      .sidebar.active { left: 0; }
+      .main { height: calc(100vh - 60px); border-right: none; }
+      .rightbar { display: none; }
+      .header { padding: 12px; font-size: 18px; }
+      .post-box, .post { padding: 12px; }
+      textarea { font-size: 16px; height: 70px; }
+    }
+
     #auth { position:fixed; inset:0; background:rgba(0,0,0,0.95); display:flex; align-items:center; justify-content:center; z-index:100; }
-    .auth-box { background:#16181c; padding:40px; border-radius:16px; text-align:center; width:320px; }
-    .logo { font-size:80px; font-weight:bold; cursor:pointer; transition:0.3s; }
-    .logo:hover { transform:scale(1.1); }
-    .full-name { font-size:28px; margin-top:10px; opacity:0; transition:0.4s; }
-    .full-name.active { opacity:1; }
-    button { background:var(--accent); color:white; border:none; padding:12px 24px; border-radius:999px; font-size:16px; margin:10px; cursor:pointer; }
+    .auth-box { background:#16181c; padding:40px 30px; border-radius:20px; text-align:center; width:90%; max-width:340px; }
+    .logo { font-size:90px; font-weight:900; cursor:pointer; transition:0.3s; }
+    .logo:hover { transform:scale(1.15); }
+    .full-name { font-size:32px; font-weight:700; margin-top:8px; opacity:0; transition:all 0.5s; }
+    .full-name.active { opacity:1; transform:translateY(-10px); }
+
+    .container { display:flex; height:100vh; max-width:1280px; margin:0 auto; }
+    .sidebar { width:260px; padding:20px; border-right:1px solid var(--border); overflow-y:auto; }
+    .main { flex:1; overflow-y:auto; }
+    .rightbar { width:320px; padding:20px; border-left:1px solid var(--border); overflow-y:auto; }
+
+    .header { 
+      padding:15px 20px; 
+      border-bottom:1px solid var(--border); 
+      font-size:22px; 
+      font-weight:700; 
+      display:flex; 
+      align-items:center; 
+      gap:15px; 
+      position:sticky; 
+      top:0; 
+      background:#000; 
+      z-index:10;
+    }
+    .hamburger { font-size:32px; cursor:pointer; display:none; }
+    @media (max-width: 768px) { .hamburger { display:block; } }
+
+    .nav-item { padding:14px 20px; font-size:20px; border-radius:999px; cursor:pointer; transition:0.2s; }
+    .nav-item:hover { background:#1a1a1a; }
+
+    .post-box { padding:20px; border-bottom:1px solid var(--border); }
+    textarea { width:100%; background:transparent; border:none; color:white; font-size:20px; resize:none; height:110px; outline:none; }
+    button { background:var(--accent); color:white; border:none; padding:12px 28px; border-radius:999px; font-weight:700; cursor:pointer; }
     button:hover { background:#1a8cd8; }
-    #app { display:none; height:100vh; }
-    .container { display:flex; height:100vh; max-width:1200px; margin:0 auto; }
-    .sidebar { width:250px; padding:20px; border-right:1px solid #333; }
-    .main { flex:1; border-right:1px solid #333; overflow-y:auto; }
-    .rightbar { width:300px; padding:20px; }
-    .header { padding:15px; border-bottom:1px solid #333; font-size:20px; font-weight:bold; }
-    .post-box { padding:15px; border-bottom:1px solid #333; }
-    textarea { width:100%; background:transparent; border:none; color:white; font-size:18px; resize:none; height:80px; }
+
     .posts { }
-    .post { padding:15px; border-bottom:1px solid #333; }
-    .post-header { display:flex; gap:10px; }
-    .avatar { width:48px; height:48px; border-radius:50%; background:#333; }
+    .post { padding:15px 20px; border-bottom:1px solid var(--border); }
+    .post-header { display:flex; gap:12px; }
+    .avatar { width:48px; height:48px; border-radius:50%; object-fit:cover; background:#222; }
     .post-content { flex:1; }
-    .actions { display:flex; justify-content:space-between; margin-top:10px; max-width:300px; }
-    .action { cursor:pointer; }
-    .like { color:#f91880; }
-    .comment-input { width:100%; margin-top:8px; }
-    .guest-notice { color:#888; font-size:14px; }
+    .actions { display:flex; justify-content:space-around; max-width:320px; margin-top:12px; font-size:18px; }
+    .action { cursor:pointer; transition:0.2s; }
+    .action:hover { transform:scale(1.2); }
+
+    /* Модальные окна */
+    .modal { 
+      position:fixed; inset:0; background:rgba(0,0,0,0.9); display:none; align-items:center; justify-content:center; z-index:300;
+    }
+    .modal-content { 
+      background:#16181c; width:90%; max-width:420px; border-radius:20px; padding:25px; text-align:center;
+    }
+    .captcha-grid { 
+      display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0;
+    }
+    .captcha-img { 
+      width:100%; height:110px; object-fit:cover; border-radius:12px; cursor:pointer; border:3px solid transparent; transition:0.2s;
+    }
+    .captcha-img.selected { border:3px solid #1d9bf0; }
+    .profile-form input, .profile-form button { width:100%; padding:12px; margin:8px 0; border-radius:12px; border:none; }
+    .profile-form input[type="text"] { background:#222; color:white; }
+    .profile-form input[type="file"] { background:#222; }
   </style>
 </head>
 <body>
 
-  <!-- Экран авторизации -->
+  <!-- ЭКРАН АВТОРИЗАЦИИ -->
   <div id="auth">
     <div class="auth-box">
       <div id="logo" class="logo" onclick="toggleLogo()">ТЬ</div>
       <div id="expandText" class="full-name">Твиьерность</div>
-      <h2>Добро пожаловать в Ть</h2>
-      <p>Присоединяйся к разговору</p>
+      <h2 style="margin:20px 0 8px;">Добро пожаловать</h2>
+      <p style="color:#888; margin-bottom:25px;">Присоединяйся к разговору</p>
       
       <div id="g_id_onload"
            data-client_id="254609526549-srv2qeo7otu12op9eh9qfkf0h8lpgck9.apps.googleusercontent.com"
            data-callback="handleCredentialResponse"
-           data-auto_prompt="false">
-      </div>
+           data-auto_prompt="false"></div>
       <div class="g_id_signin" data-type="standard" data-size="large" data-theme="filled_blue" data-text="continue_with"></div>
-
-      <button onclick="guestLogin()">Войти как гость</button>
-      <p style="margin-top:20px; font-size:12px;">Гости могут только читать посты</p>
+      
+      <button onclick="guestLogin()" style="background:#333; width:100%; margin-top:15px;">Войти как гость 👀</button>
+      <p style="margin-top:20px; font-size:13px; color:#666;">Гости могут только читать</p>
     </div>
   </div>
 
-  <!-- Основное приложение -->
-  <div id="app">
+  <!-- ПРИЛОЖЕНИЕ -->
+  <div id="app" style="display:none;">
     <div class="container">
-      <!-- Сайдбар -->
-      <div class="sidebar">
-        <div onclick="toggleLogo()" style="font-size:40px; font-weight:bold; cursor:pointer; margin-bottom:30px;">ТЬ</div>
-        <div style="font-size:20px; margin:15px 0; cursor:pointer;">🏠 Главная</div>
-        <div style="font-size:20px; margin:15px 0; cursor:pointer;">🔍 Поиск</div>
-        <div style="font-size:20px; margin:15px 0; cursor:pointer;">🛎 Уведомления</div>
-        <div style="font-size:20px; margin:15px 0; cursor:pointer;" onclick="showProfile()">👤 Профиль</div>
-        <button onclick="logout()" style="width:100%; margin-top:30px;">Выйти</button>
+      <!-- САЙДБАР (мобильный с анимацией) -->
+      <div id="sidebar" class="sidebar">
+        <div onclick="toggleLogo()" style="font-size:48px; font-weight:900; cursor:pointer; margin:20px 0 30px;">ТЬ</div>
+        <div class="nav-item" onclick="showFeed()">🏠 Главная</div>
+        <div class="nav-item" onclick="showProfileModal()">👤 Профиль</div>
+        <div class="nav-item" onclick="logout()">🚪 Выйти</div>
       </div>
 
-      <!-- Основная лента -->
+      <!-- ОСНОВНАЯ ЛЕНТА -->
       <div class="main">
-        <div class="header">Главная</div>
-        
-        <!-- Создать пост (только не гость) -->
-        <div id="postCreator" class="post-box">
-          <textarea id="postText" placeholder="Что происходит?"></textarea>
-          <div class="g-recaptcha" id="recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"></div> <!-- Тестовый ключ! Замени на свой -->
-          <button onclick="createPost()">Опубликовать в Ть</button>
+        <div class="header">
+          <span class="hamburger" onclick="toggleMobileMenu()">≡</span>
+          <span style="flex:1;">Главная</span>
         </div>
 
-        <!-- Лента постов -->
+        <!-- Создать пост (только не гость) -->
+        <div id="postCreator" class="post-box">
+          <div style="display:flex; gap:12px;">
+            <img id="myAvatar" src="https://via.placeholder.com/48" class="avatar" style="width:42px;height:42px;">
+            <textarea id="postText" placeholder="Что происходит?"></textarea>
+          </div>
+          <button onclick="verifyHumanAndPost()" style="margin-top:15px; width:100%;">Опубликовать в Ть</button>
+        </div>
+
+        <!-- Лента -->
         <div id="posts" class="posts"></div>
       </div>
 
-      <!-- Правая панель -->
+      <!-- ПРАВАЯ ПАНЕЛЬ -->
       <div class="rightbar">
-        <h3>Что происходит</h3>
-        <p style="color:#888;">Рекомендации и тренды скоро появятся...</p>
-        
-        <div id="profileInfo" style="margin-top:30px;"></div>
+        <h3>Ты в Твиьерности</h3>
+        <div id="profileInfo"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА РЕДАКТИРОВАНИЯ ПРОФИЛЯ -->
+  <div id="profileModal" class="modal">
+    <div class="modal-content">
+      <h3>Редактировать профиль</h3>
+      <div class="profile-form">
+        <input type="text" id="editName" placeholder="Имя">
+        <input type="text" id="editUsername" placeholder="Никнейм (@)">
+        <label style="color:#888; display:block; margin:10px 0 5px;">Аватарка</label>
+        <input type="file" id="editAvatar" accept="image/*">
+        <button onclick="saveProfile()">Сохранить изменения</button>
+        <button onclick="closeProfileModal()" style="background:#333;">Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА КАПЧИ С КАРТИНКАМИ -->
+  <div id="captchaModal" class="modal">
+    <div class="modal-content">
+      <h3>Докажи, что ты не робот 🛡️</h3>
+      <p id="captchaInstruction" style="margin:15px 0; font-size:18px;">Нажми на <strong>все изображения с автомобилями</strong></p>
+      <div id="captchaGrid" class="captcha-grid"></div>
+      <button onclick="checkCaptcha()" style="margin-top:15px;">Подтвердить</button>
+      <button onclick="closeCaptcha()" style="background:#333; margin-left:10px;">Отмена</button>
     </div>
   </div>
 
 <script>
-// === Глобальные переменные ===
+// ==================== ГЛОБАЛЬНЫЕ ====================
 let currentUser = null;
 let posts = [];
+let captchaSelected = [];
+let captchaCorrect = [];
 
-// === Анимация логотипа ===
+// ==================== ЛОГО ====================
 function toggleLogo() {
-  const text = document.getElementById('expandText');
-  text.classList.toggle('active');
+  document.getElementById('expandText').classList.toggle('active');
 }
 
-// === Google Sign-In ===
+// ==================== GOOGLE ====================
 function handleCredentialResponse(response) {
-  const data = jwt_decode(response.credential); // Нужно добавить jwt_decode (см. ниже)
-  
+  const data = jwt_decode(response.credential);
   currentUser = {
     type: 'google',
     name: data.name,
-    email: data.email,
-    picture: data.picture
+    username: '@' + data.email.split('@')[0],
+    avatar: data.picture || 'https://via.placeholder.com/48',
+    verified: false
   };
-  
-  startApp();
+  loadUserProfile(); // подгружаем сохранённые правки
+  showCaptcha(() => startApp());
 }
 
-// Простая функция для декодирования JWT (добавь эту библиотеку)
-function jwt_decode(token) {
-  const base64Url = token.split('.')[1];
-  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-  return JSON.parse(decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
-}
-
-// === Гостевой вход ===
+// ==================== ГОСТЬ ====================
 function guestLogin() {
-  currentUser = { type: 'guest', name: 'Гость', picture: '' };
-  startApp();
+  currentUser = {
+    type: 'guest',
+    name: 'Гость',
+    username: '@guest',
+    avatar: 'https://via.placeholder.com/48',
+    verified: false
+  };
+  loadUserProfile();
+  showCaptcha(() => startApp());
 }
 
-// === Запуск приложения ===
+// ==================== ЗАПУСК ====================
 function startApp() {
   document.getElementById('auth').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   
   if (currentUser.type === 'guest') {
     document.getElementById('postCreator').style.display = 'none';
+  } else {
+    document.getElementById('postCreator').style.display = 'block';
   }
   
   loadPosts();
   updateProfileInfo();
 }
 
-// === Профиль ===
-function showProfile() {
-  alert(`Профиль:\nИмя: ${currentUser.name}\nТип: ${currentUser.type === 'guest' ? 'Гость' : 'Google'}`);
+// ==================== ПРОФИЛЬ ====================
+function loadUserProfile() {
+  const saved = localStorage.getItem('twiiernost_user');
+  if (saved) {
+    const savedUser = JSON.parse(saved);
+    currentUser.name = savedUser.name || currentUser.name;
+    currentUser.username = savedUser.username || currentUser.username;
+    currentUser.avatar = savedUser.avatar || currentUser.avatar;
+  }
+}
+
+function saveUserProfile() {
+  localStorage.setItem('twiiernost_user', JSON.stringify({
+    name: currentUser.name,
+    username: currentUser.username,
+    avatar: currentUser.avatar
+  }));
 }
 
 function updateProfileInfo() {
-  const info = document.getElementById('profileInfo');
-  info.innerHTML = `
+  document.getElementById('profileInfo').innerHTML = `
+    <img src="${currentUser.avatar}" class="avatar" style="width:68px;height:68px;margin-bottom:12px;">
     <strong>${currentUser.name}</strong><br>
-    <small>${currentUser.type === 'guest' ? 'Только просмотр' : currentUser.email}</small>
-    ${currentUser.type === 'guest' ? '<br><button onclick="location.reload()">Войти через Google</button>' : ''}
+    <span style="color:#1d9bf0;">${currentUser.username}</span><br>
+    <small>${currentUser.type === 'guest' ? 'Только просмотр' : 'Google'}</small>
   `;
 }
 
-// === Создание поста с reCAPTCHA ===
+function showProfileModal() {
+  document.getElementById('editName').value = currentUser.name;
+  document.getElementById('editUsername').value = currentUser.username.replace('@','');
+  document.getElementById('profileModal').style.display = 'flex';
+}
+
+function closeProfileModal() {
+  document.getElementById('profileModal').style.display = 'none';
+}
+
+function saveProfile() {
+  const newName = document.getElementById('editName').value.trim();
+  const newUsername = '@' + document.getElementById('editUsername').value.trim();
+  
+  if (newName) currentUser.name = newName;
+  if (newUsername.length > 1) currentUser.username = newUsername;
+  
+  // Аватарка
+  const fileInput = document.getElementById('editAvatar');
+  if (fileInput.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      currentUser.avatar = e.target.result;
+      document.getElementById('myAvatar').src = currentUser.avatar;
+      saveUserProfile();
+      updateProfileInfo();
+      closeProfileModal();
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+  } else {
+    saveUserProfile();
+    updateProfileInfo();
+    closeProfileModal();
+  }
+}
+
+// ==================== МОБИЛЬНОЕ МЕНЮ ====================
+function toggleMobileMenu() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('active');
+}
+
+// ==================== КАПЧА С КАРТИНКАМИ ====================
+function showCaptcha(callback) {
+  if (currentUser.verified) return callback();
+  
+  captchaSelected = [];
+  const grid = document.getElementById('captchaGrid');
+  grid.innerHTML = '';
+  
+  // 6 картинок (3 машины = correct)
+  const allImages = [
+    {src: "https://picsum.photos/id/1015/150", correct: true},   // машина
+    {src: "https://picsum.photos/id/160/150", correct: true},    // машина
+    {src: "https://picsum.photos/id/29/150", correct: true},     // машина
+    {src: "https://picsum.photos/id/201/150", correct: false},   // мост
+    {src: "https://picsum.photos/id/251/150", correct: false},   // природа
+    {src: "https://picsum.photos/id/30/150", correct: false}     // люди
+  ];
+  
+  // перемешиваем
+  captchaCorrect = allImages.filter(i => i.correct);
+  const shuffled = allImages.sort(() => Math.random() - 0.5);
+  
+  shuffled.forEach((img, index) => {
+    const el = document.createElement('img');
+    el.src = img.src;
+    el.className = 'captcha-img';
+    el.dataset.index = index;
+    el.onclick = () => {
+      el.classList.toggle('selected');
+      const idx = captchaSelected.indexOf(index);
+      if (idx > -1) captchaSelected.splice(idx,1);
+      else captchaSelected.push(index);
+    };
+    grid.appendChild(el);
+  });
+  
+  document.getElementById('captchaModal').style.display = 'flex';
+  window.captchaCallback = callback; // сохраняем колбэк
+}
+
+function checkCaptcha() {
+  const selectedImages = captchaSelected.map(i => document.querySelectorAll('.captcha-img')[i]);
+  
+  // проверяем: все correct выбраны и нет лишних
+  const correctIndexes = Array.from(document.querySelectorAll('.captcha-img'))
+    .map((el,i) => el.src.includes('1015') || el.src.includes('160') || el.src.includes('29') ? i : -1)
+    .filter(i => i !== -1);
+  
+  const isCorrect = captchaSelected.every(idx => correctIndexes.includes(idx)) &&
+                    captchaSelected.length === 3;
+  
+  if (isCorrect) {
+    currentUser.verified = true;
+    document.getElementById('captchaModal').style.display = 'none';
+    window.captchaCallback();
+  } else {
+    alert('❌ Неправильно! Попробуй ещё раз.');
+    captchaSelected = [];
+    document.querySelectorAll('.captcha-img').forEach(el => el.classList.remove('selected'));
+  }
+}
+
+function closeCaptcha() {
+  document.getElementById('captchaModal').style.display = 'none';
+}
+
+// ==================== ПОСТЫ ====================
+function verifyHumanAndPost() {
+  if (currentUser.type === 'guest') return;
+  showCaptcha(() => createPost());
+}
+
 function createPost() {
   const text = document.getElementById('postText').value.trim();
-  if (!text) return alert('Пост не может быть пустым');
-  if (text.length < 3) return alert('Пост слишком короткий');
-
-  // Проверка reCAPTCHA (тестовая)
-  const recaptchaResponse = grecaptcha.getResponse();
-  if (!recaptchaResponse) {
-    return alert('Пожалуйста, подтвердите, что вы не робот');
-  }
+  if (!text || text.length < 3) return alert('Пост слишком короткий или пустой');
 
   posts.unshift({
     id: Date.now(),
     user: currentUser.name,
-    avatar: currentUser.picture || 'https://via.placeholder.com/48',
+    username: currentUser.username,
+    avatar: currentUser.avatar,
     text: text,
     date: new Date().toLocaleString('ru-RU'),
     likes: 0,
@@ -190,15 +401,13 @@ function createPost() {
 
   savePosts();
   document.getElementById('postText').value = '';
-  grecaptcha.reset();
   loadPosts();
 }
 
-// === Загрузка и отображение постов ===
 function loadPosts() {
   const container = document.getElementById('posts');
   container.innerHTML = '';
-
+  
   posts.forEach(post => {
     const div = document.createElement('div');
     div.className = 'post';
@@ -206,13 +415,14 @@ function loadPosts() {
       <div class="post-header">
         <img src="${post.avatar}" class="avatar">
         <div class="post-content">
-          <strong>${post.user}</strong> · ${post.date}
-          <p>${post.text}</p>
+          <strong>${post.user}</strong> <span style="color:#1d9bf0;">${post.username}</span><br>
+          <small>${post.date}</small>
+          <p style="margin:10px 0;">${post.text}</p>
           <div class="actions">
             <span class="action" onclick="likePost(${post.id})">❤️ ${post.likes}</span>
             <span class="action" onclick="addComment(${post.id})">💬 ${post.comments.length}</span>
           </div>
-          <div id="comments-${post.id}"></div>
+          <div id="comments-${post.id}" style="margin-top:10px; font-size:14px;"></div>
         </div>
       </div>
     `;
@@ -232,33 +442,30 @@ function likePost(id) {
 
 function addComment(id) {
   if (currentUser.type === 'guest') return alert('Гости не могут комментировать');
-  
-  const commentText = prompt('Ваш комментарий:');
-  if (!commentText) return;
+  const text = prompt('Напиши комментарий:');
+  if (!text) return;
   
   const post = posts.find(p => p.id === id);
   if (post) {
-    post.comments.push({ user: currentUser.name, text: commentText });
+    post.comments.push({user: currentUser.name, text});
     savePosts();
     loadPosts();
   }
 }
 
-function renderComments(postId) {
-  const post = posts.find(p => p.id === postId);
-  if (!post) return;
-  
-  const container = document.getElementById(`comments-${postId}`);
-  if (!container) return;
+function renderComments(id) {
+  const post = posts.find(p => p.id === id);
+  const container = document.getElementById(`comments-${id}`);
+  if (!container || !post) return;
   
   container.innerHTML = post.comments.map(c => `
-    <div style="margin:8px 0; font-size:14px;">
+    <div style="margin:6px 0; padding:6px 10px; background:#111; border-radius:8px;">
       <strong>${c.user}:</strong> ${c.text}
     </div>
   `).join('');
 }
 
-// === Сохранение в localStorage ===
+// ==================== ХРАНЕНИЕ ====================
 function savePosts() {
   localStorage.setItem('twiiernost_posts', JSON.stringify(posts));
 }
@@ -268,24 +475,31 @@ function loadSavedPosts() {
   if (saved) posts = JSON.parse(saved);
 }
 
-// === Выход ===
+// ==================== ВЫХОД ====================
 function logout() {
-  if (confirm('Выйти из аккаунта?')) {
+  if (confirm('Выйти из Твиьерности?')) {
+    localStorage.removeItem('twiiernost_user');
     location.reload();
   }
 }
 
-// === Инициализация ===
+function showFeed() {
+  document.getElementById('sidebar').classList.remove('active');
+}
+
+// ==================== ИНИЦИАЛИЗАЦИЯ ====================
 window.onload = function() {
   loadSavedPosts();
   
-  // Для удобства тестирования можно раскомментировать гостевой вход автоматически:
-  // setTimeout(guestLogin, 500);
+  // Автозагрузка сохранённого профиля при перезагрузке (если был авторизован)
+  const savedUser = localStorage.getItem('twiiernost_user');
+  if (savedUser) {
+    // в реальной версии можно было бы сохранить и user type, но для простоты пока через auth
+  }
+  
+  // Для теста можно раскомментировать гостевой вход:
+  // setTimeout(guestLogin, 300);
 };
 </script>
-
-<!-- Библиотека для декодирования JWT (нужна для Google) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jwt-decode/3.1.2/jwt-decode.min.js"></script>
-
 </body>
 </html>
